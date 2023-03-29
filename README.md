@@ -17,3 +17,11 @@ VARUS from https://github.com/Gaius-Augustus/VARUS
 
 BUSCO from https://busco.ezlab.org/
 
+# Usage:
+
+Input should be a table with at least 1 column:
+
+```
+SPECIES_NAME DNA_LINK RNA_LINK(s)[optional]
+
+```
