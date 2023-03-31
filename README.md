@@ -25,7 +25,13 @@ sratoolkit v3.0.2 minimum
 Input should be a table with at least 1 column:
 
 ```
-SPECIES_NAME DNA_LINK RNA_LINK(s)[optional]
+See table_example.tbl
+Columns are divided by space or tab
+
+SPECIES_NAME DNA_LINK RNA_LINKS[optional,ID1_1,ID1_2,ID2_1,ID2_2 ... ]
+Drosophila melanogaster https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz   /home/saenkos/homework/try/SRR13030903_1.fastq,/home/saenkos/homework/try/SRR13030903_2.fastq
+Tribolium castaneum     https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/335/GCF_000002335.3_Tcas5.2/GCF_000002335.3_Tcas5.2_genomic.fna.gz 
+Bombyx mori
 
 
 varus-braker.py --input table.txt [optional] --batchsize 100000 --maxBatches 5000 --clade arthropoda
