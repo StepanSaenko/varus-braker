@@ -17,6 +17,9 @@ VARUS from https://github.com/Gaius-Augustus/VARUS
 
 BUSCO from https://busco.ezlab.org/
 
+hisat2
+sratoolkit v3.0.2 minimum
+
 # Usage:
 
 Input should be a table with at least 1 column:
@@ -24,15 +27,20 @@ Input should be a table with at least 1 column:
 ```
 SPECIES_NAME DNA_LINK RNA_LINK(s)[optional]
 
+
+varus-braker.py --input table.txt [optional] --batchsize 100000 --maxBatches 5000 --clade arthropoda
 ```
+
+
 # Configuration
 
 File config.ini should have pathways to all executables. 
 ```
 [VARUS]
 varus_path = /home/saenkos/VARUS/VARUS2
-hisat2_path = 
-sratoolkit_path =
+hisat2_path = /home/saenkos/hisat2
+sratoolkit_path = /home/saenkos/sratoolkit.3.0.2-ubuntu64/bin
+
 
 [BRAKER]
 braker_cmd = /home/saenkos/braker3/BRAKER/scripts/braker.pl 
@@ -53,8 +61,9 @@ In case using singularity containter :
 ```
 [VARUS]
 varus_path = /home/saenkos/VARUS/VARUS2
-hisat2_path = 
-sratoolkit_path =
+hisat2_path = /home/saenkos/hisat2
+sratoolkit_path = /home/saenkos/sratoolkit.3.0.2-ubuntu64/bin
+
 
 [BRAKER]
 braker_cmd = singularity exec braker.sif braker.pl 
