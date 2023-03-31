@@ -247,9 +247,9 @@ def varus_run(dna_path, genus, species):
     os.chdir(current_dir)
     return(job_id, varus_bam)
 
-def braker_run(dna_path,rna_path, genus, species, config_file):
+def braker_run(dna_path,rna_path, genus, species):
     config = configparser.ConfigParser()
-    config.read(config_file)
+    config.read("config.ini")
     #print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
     current_dir = os.getcwd()
     #print("BRAKER3 current directory:", current_dir)
