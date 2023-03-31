@@ -17,8 +17,10 @@ VARUS from https://github.com/Gaius-Augustus/VARUS
 
 BUSCO from https://busco.ezlab.org/
 
-hisat2
-sratoolkit v3.0.2 minimum
+hisat2 https://github.com/DaehwanKimLab/hisat2
+
+sra-toolkit https://github.com/ncbi/sra-tools requeired version >= 3.0.2 
+Important: GeneMark-ETP has sra-tools included, but v3.0.1
 
 # Usage:
 
