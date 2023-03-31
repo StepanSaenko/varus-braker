@@ -2,7 +2,7 @@
 Small pipeline combining raw genome-data and VARUS.bam (or RNA-seq data) and run BRAKER3
 
 
-# Software dependencies:
+# Software dependencies
 
 
 BRAKER3 from https://github.com/Gaius-Augustus/BRAKER
@@ -22,7 +22,7 @@ hisat2 https://github.com/DaehwanKimLab/hisat2
 sra-toolkit https://github.com/ncbi/sra-tools requeired version >= 3.0.2 
 Important: GeneMark-ETP has sra-tools included, but v3.0.1
 
-# Usage:
+# Usage
 
 Input should be a table with at least 1 column:
 
