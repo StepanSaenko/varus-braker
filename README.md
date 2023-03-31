@@ -53,7 +53,7 @@ sratoolkit_path = /home/saenkos/sratoolkit.3.0.2-ubuntu64/bin
 [BRAKER]
 braker_cmd = /home/saenkos/braker3/BRAKER/scripts/braker.pl 
 augustus_config_path = /home/saenkos/Augustus/config
-augustus_bin_path =
+augustus_bin_path = /home/saenkos/Augustus/bin
 augustus_scripts_path = /home/saenkos/Augustus/scripts
 diamond_path = /home/saenkos/
 prothint_path = /home/saenkos/ProtHint/bin
