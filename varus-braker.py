@@ -1,19 +1,16 @@
-import binascii
 import subprocess
-import sys
 import time
 import os
 import urllib.request
 import urllib.error
 import gzip
-import hashlib
-import requests
 import re
 import argparse
 import shutil
 import zipfile
 from multiprocessing.pool import Pool
 import configparser
+
 #defaults
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
