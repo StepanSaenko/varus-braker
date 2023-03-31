@@ -288,7 +288,7 @@ export LC_ALL=en_US.UTF-8
 {module_load}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
 {diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
---species="""+genus+"_"+species +  " --workingdir=./" +w_dir + " --prot_seq="+proteins_file_path+" --genome=./"+os.path.basename(dna_path) + rna_subline
+--species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}"""
 
     #print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
