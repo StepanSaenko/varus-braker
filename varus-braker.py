@@ -13,7 +13,7 @@ import argparse
 import shutil
 import zipfile
 from multiprocessing.pool import Pool
-
+import configparser
 #defaults
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
@@ -29,7 +29,7 @@ batchsize = args.batchsize
 maxbatches = args.maxBatches
 partitition = args.part
 clade = args.clade
-
+partitition = config.get('SLURM_ARGS', 'partition') 
 main_dir = os.getcwd()
 
 def remove_symbols_after_first_space(filename):
@@ -123,7 +123,7 @@ def repeatmasking(dna_path, genus):
 #SBATCH --get-user-env
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 50
-#SBATCH -p """+partitition+ """
+#SBATCH -p {}
 
 ###-LOAD PRE-INSTALLED MODULES
 
@@ -142,7 +142,7 @@ ln -s RM_*/consensi.fa.classified ./
 
 echo "Run RepeatMasker ..."
 time RepeatMasker -pa 50 -gff -lib consensi.fa.classified $INPUT
-""".format(dna_path, genus)
+""".format(partitition, dna_path, genus)
     #print("RM script = :", repmask_script)
     repmask_process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     repmask_process.stdin.write(repmask_script.encode())
@@ -161,51 +161,62 @@ def varus_run(dna_path, genus, species):
     os.chdir(new_dir)
     # get new current working directory
     new_current_dir = os.getcwd()
+
     if os.path.exists(f"{new_current_dir}/varus.err"):
         # Delete the file
         os.remove(f"{new_current_dir}/varus.err")
-        print("File varus.err has been deleted")
+        #print("File varus.err has been deleted")
     else:
         print("File varus.err does not exist")
+
+    #parse config file
+    varus_path = config.get('VARUS', 'varus_path')
+    hisat2_path = config.get('VARUS', 'hisat2_path')
+    sratoolkit_path = config.get('VARUS', 'sratoolkit_path')
+
+    hisat2_export_path = f"export PATH={hisat2_path}:$PATH" if hisat2_path else ""
+    sratoolkit_export_path = f"export PATH={sratoolkit_path}:$PATH" if sratoolkit_path else ""
+
     with open('VARUSparameters.txt', 'w') as f:
-        f.write('--batchSize '+str(batchsize)+'\n')
-        f.write('--blockSize 5000\n')
-        f.write('--components 1\n')
-        f.write('--cost 0.001\n')
-        f.write('--deleteLater 0\n')
-        f.write('--estimator 2\n')
-        f.write('--exportObservationsToFile 1\n')
-        f.write('--exportParametersToFile 1\n')
-        f.write('--fastqDumpCall fastq-dump\n')
-        f.write('--genomeDir ./genome/\n')
-        f.write('--lambda 10.0\n')
-        f.write('--lessInfo 1\n')
-        f.write('--loadAllOnce 0\n')
-        f.write('--maxBatches '+str(maxbatches)+'\n')
-        f.write('--mergeThreshold 10\n')
-        f.write('--outFileNamePrefix ./\n')
-        f.write('--pathToParameters ./VARUSparameters.txt\n')
-        f.write('--pathToRuns ./\n')
-        f.write('--pathToVARUS /home/saenkos/VARUS2/VARUS/Implementation\n')
-        f.write('--profitCondition 0\n')
-        f.write('--pseudoCount 1\n')
-        f.write('--qualityThreshold 5\n')
-        f.write('--randomSeed 1\n')
-        f.write('--readParametersFromFile 1\n')
-        f.write('--runThreadN 32\n')
-        f.write('--verbosityDebug 1\n')
-        
-    slurm_varus = """#!/bin/bash
+        f.write(f"--batchSize {batchsize}\n")
+        f.write(f"--blockSize 5000\n")
+        f.write(f"--components 1\n")
+        f.write(f"--cost 0.001\n")
+        f.write(f"--deleteLater 0\n")
+        f.write(f"--estimator 2\n")
+        f.write(f"--exportObservationsToFile 1\n")
+        f.write(f"--exportParametersToFile 1\n")
+        f.write(f"--fastqDumpCall fastq-dump\n")
+        f.write(f"--genomeDir ./genome/\n")
+        f.write(f"--lambda 10.0\n")
+        f.write(f"--lessInfo 1\n")
+        f.write(f"--loadAllOnce 0\n")
+        f.write(f"--maxBatches {maxbatches}\n")
+        f.write(f"--mergeThreshold 10\n")
+        f.write(f"--outFileNamePrefix ./\n")
+        f.write(f"--pathToParameters ./VARUSparameters.txt\n")
+        f.write(f"--pathToRuns ./\n")
+        f.write(f"--pathToVARUS {varus_path}/Implementation\n")
+        f.write(f"--profitCondition 0\n")
+        f.write(f"--pseudoCount 1\n")
+        f.write(f"--qualityThreshold 5\n")
+        f.write(f"--randomSeed 1\n")
+        f.write(f"--readParametersFromFile 1\n")
+        f.write(f"--runThreadN 32\n")
+        f.write(f"--verbosityDebug 1\n")
+
+      
+    slurm_varus = f"""#!/bin/bash
 #SBATCH -o varus.%j.%N.out
 #SBATCH -e varus.%j.%N.err
 #SBATCH -J varus
 #SBATCH --get-user-env
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
-#SBATCH -p """+partitition+ """
-    PATH=/home/saenkos/hisat2:$PATH
-    PATH=/home/saenkos/sratoolkit.3.0.2-ubuntu64/bin:$PATH 
-    /home/saenkos/VARUS2/VARUS/runVARUS.pl --aligner=HISAT --readFromTable=0 --createindex=1 --latinGenus="""+genus+ " --latinSpecies="+species+" --speciesGenome="+os.path.basename(dna_path)+" --logfile=varus.log 2>varus.err"
+#SBATCH -p {partitition}
+    {hisat2_export_path}
+    {sratoolkit_export_path}
+    {varus_path}/runVARUS.pl --aligner=HISAT --readFromTable=0 --createindex=1 --latinGenus={genus} --latinSpecies={species} --speciesGenome={os.path.basename(dna_path)} --logfile=varus.log 2>varus.err"""
     #print(slurm_varus)
     #print("_______________________")
     #print(slurm_varus)
@@ -236,7 +247,9 @@ def varus_run(dna_path, genus, species):
     os.chdir(current_dir)
     return(job_id, varus_bam)
 
-def braker_run(dna_path,rna_path, genus, species):
+def braker_run(dna_path,rna_path, genus, species, config_file):
+    config = configparser.ConfigParser()
+    config.read(config_file)
     #print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
     current_dir = os.getcwd()
     #print("BRAKER3 current directory:", current_dir)
@@ -255,7 +268,7 @@ def braker_run(dna_path,rna_path, genus, species):
         rna_names  = ",".join(prefixes)
         rna_subline =  " --rnaseq_sets_ids="+rna_names+ " --rnaseq_sets_dirs="+os.path.dirname(os.path.abspath(rna_paths[0]))
 
-    partitition = config.get('SLURM_ARGS', 'partition')
+    #parse config file
     augustus_bin_path = config.get('BRAKER', 'augustus_bin_path', fallback=None)
     augustus_config_path = config.get('BRAKER', 'augustus_config_path')
     augustus_scripts_path = config.get('BRAKER', 'augustus_scripts_path')
@@ -271,6 +284,8 @@ def braker_run(dna_path,rna_path, genus, species):
     diamond_arg = f"--DIAMOND_PATH={diamond_path}" if diamond_path else ''
     prothint_arg = f"--PROTHINT_PATH={prothint_path}" if prothint_path else ''
     genemark_arg = f"--GENEMARK_PATH={genemark_path}" if genemark_path else ''
+    genemark_export = f"export PATH={genemark_path}/tools:$PATH" if genemark_path else ''
+    module_arg = f"--module={module_load}" if module_load else ''
 
 
     slurm_braker = f"""#!/bin/bash
@@ -281,11 +296,11 @@ def braker_run(dna_path,rna_path, genus, species):
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
 #SBATCH -p {partitition}
-PATH={genemark_path}/tools:$PATH
+{genemark_export}
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-{module_load}
+{module_arg}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
 {diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
 --species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}"""
