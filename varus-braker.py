@@ -17,14 +17,13 @@ import configparser
 #defaults
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
-parser.add_argument('--input_file', type=str, help='path to the input file, table should have column with species names, column with links to DNA-data, [optional] column with links to RNA-data',  default="list.txt")
+parser.add_argument('--input', type=str, help='path to the input file, table should have column with species names, column with links to DNA-data, [optional] column with links to RNA-data',  default="list.txt")
 parser.add_argument('--batchsize', type=int, default=100000)
 parser.add_argument('--maxBatches', type=int, default=5000)
-parser.add_argument('--part', type=str,default="snowball")
 parser.add_argument('--clade', type=str,choices=['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles'], help='Choose a clade', default="arthropoda")
 
 args = parser.parse_args()
-input_file_path = args.input_file
+input_file_path = args.input
 batchsize = args.batchsize
 maxbatches = args.maxBatches
 partitition = args.part
