@@ -255,21 +255,39 @@ def braker_run(dna_path,rna_path, genus, species):
         rna_names  = ",".join(prefixes)
         rna_subline =  " --rnaseq_sets_ids="+rna_names+ " --rnaseq_sets_dirs="+os.path.dirname(os.path.abspath(rna_paths[0]))
 
-    slurm_braker = """#!/bin/bash
+    partitition = config.get('SLURM_ARGS', 'partition')
+    augustus_bin_path = config.get('BRAKER', 'augustus_bin_path', fallback=None)
+    augustus_config_path = config.get('BRAKER', 'augustus_config_path')
+    augustus_scripts_path = config.get('BRAKER', 'augustus_scripts_path')
+    module_load = config.get('SLURM_ARGS', 'module_load')
+    braker_cmd = config.get('BRAKER', 'braker_cmd')
+    diamond_path = config.get('BRAKER', 'diamond_path')
+    prothint_path = config.get('BRAKER', 'prothint_path')
+    genemark_path = config.get('BRAKER', 'genemark_path')
+    
+    augustus_bin_arg = f"--AUGUSTUS_BIN_PATH={augustus_bin_path}" if augustus_bin_path else ''
+    augustus_config_arg = f"--AUGUSTUS_CONFIG_PATH={augustus_config_path}" if augustus_config_path else ''
+    augustus_scripts_arg = f"--AUGUSTUS_SCRIPTS_PATH={augustus_scripts_path}" if augustus_scripts_path else ''
+    diamond_arg = f"--DIAMOND_PATH={diamond_path}" if diamond_path else ''
+    prothint_arg = f"--PROTHINT_PATH={prothint_path}" if prothint_path else ''
+    genemark_arg = f"--GENEMARK_PATH={genemark_path}" if genemark_path else ''
+
+
+    slurm_braker = f"""#!/bin/bash
 #SBATCH -o braker.%j.%N.out
 #SBATCH -e braker.%j.%N.err
 #SBATCH -J braker3
 #SBATCH --get-user-env
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
-#SBATCH -p """+partitition+ """
-PATH=/home/saenkos/GeneMark-ETP/tools:$PATH
+#SBATCH -p {partitition}
+PATH={genemark_path}/tools:$PATH
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-module load bedtools
-/home/saenkos/braker3/BRAKER/scripts/braker.pl --AUGUSTUS_CONFIG_PATH=/home/saenkos/Augustus/config --AUGUSTUS_BIN_PATH=/home/saenkos/Augustus/bin --AUGUSTUS_SCRIPTS_PATH=/home/saenkos/Augustus/scripts \
---DIAMOND_PATH=/home/saenkos/ --PROTHINT_PATH=/home/saenkos/ProtHint/bin --softmasking --useexisting --GENEMARK_PATH=/home/saenkos/GeneMark-ETP/bin \
+{module_load}
+{braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
+{diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
 --species="""+genus+"_"+species +  " --workingdir=./" +w_dir + " --prot_seq="+proteins_file_path+" --genome=./"+os.path.basename(dna_path) + rna_subline
 
     #print(slurm_braker)
