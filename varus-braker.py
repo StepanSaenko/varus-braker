@@ -504,13 +504,15 @@ if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
         table = [line.strip() for line in f.readlines()]
-    print(table)        
+    print(table)      
+    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
+  
     with Pool() as pool:
-        pool.map(process_line, table)
+        pool.map(process_line, parts)
 
     # Close the pool and wait for all processes to finish
-        pool.close()
-        pool.join()
+    pool.close()
+    pool.join()
 
     # Save the results to an output file
 
