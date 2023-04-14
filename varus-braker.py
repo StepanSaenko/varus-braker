@@ -15,15 +15,11 @@ import configparser
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
 parser.add_argument('--input', type=str, help='path to the input file, table should have column with species names, column with links to DNA-data, [optional] column with links to RNA-data',  default="list.txt")
-parser.add_argument('--batchsize', type=int, default=100000)
-parser.add_argument('--maxBatches', type=int, default=5000)
 parser.add_argument('--clade', type=str,choices=['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles'], help='Choose a clade', default="arthropoda")
-
+config = configparser.ConfigParser()
+config.read('config.ini')
 args = parser.parse_args()
 input_file_path = args.input
-batchsize = args.batchsize
-maxbatches = args.maxBatches
-partitition = args.part
 clade = args.clade
 partitition = config.get('SLURM_ARGS', 'partition') 
 main_dir = os.getcwd()
@@ -157,19 +153,25 @@ def varus_run(dna_path, genus, species):
     os.chdir(new_dir)
     # get new current working directory
     new_current_dir = os.getcwd()
-
+    name_id = str(genus) + '_' + str(species)
     if os.path.exists(f"{new_current_dir}/varus.err"):
         # Delete the file
         os.remove(f"{new_current_dir}/varus.err")
         #print("File varus.err has been deleted")
     else:
         print("File varus.err does not exist")
+    if os.path.exists(f"{new_current_dir}/{name_id}/VARUS.bam"):
+        os.chdir(current_dir)
+        print("varus.bam is already exists")
+        return ("1", f"{new_current_dir}/{name_id}/VARUS.bam")
 
     #parse config file
     varus_path = config.get('VARUS', 'varus_path')
     hisat2_path = config.get('VARUS', 'hisat2_path')
     sratoolkit_path = config.get('VARUS', 'sratoolkit_path')
-
+    batchsize = config.get('VARUS', 'batchsize')
+    maxbatches = config.get('VARUS', 'maxbatches')
+    
     hisat2_export_path = f"export PATH={hisat2_path}:$PATH" if hisat2_path else ""
     sratoolkit_export_path = f"export PATH={sratoolkit_path}:$PATH" if sratoolkit_path else ""
 
@@ -210,9 +212,9 @@ def varus_run(dna_path, genus, species):
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
 #SBATCH -p {partitition}
-    {hisat2_export_path}
-    {sratoolkit_export_path}
-    {varus_path}/runVARUS.pl --aligner=HISAT --readFromTable=0 --createindex=1 --latinGenus={genus} --latinSpecies={species} --speciesGenome={os.path.basename(dna_path)} --logfile=varus.log 2>varus.err"""
+{hisat2_export_path}
+{sratoolkit_export_path}
+{varus_path}/runVARUS.pl --aligner=HISAT --readFromTable=0 --createindex=1 --latinGenus={genus} --latinSpecies={species} --speciesGenome={os.path.basename(dna_path)} --logfile=varus.log 2>varus.err"""
     #print(slurm_varus)
     #print("_______________________")
     #print(slurm_varus)
@@ -223,7 +225,6 @@ def varus_run(dna_path, genus, species):
         job_id = re.search(r"\d+", output.decode().strip()).group()
         #print("VARUS Job ID:", job_id)
         process.stdin.close()
-        name_id = str(genus) + '_' + str(species)
         varus_bam = f"{new_current_dir}/{name_id}/VARUS.bam"
         varus_err = f"{new_current_dir}/varus.err"
         #print("Varus.bam = ", varus_bam)
@@ -243,15 +244,16 @@ def varus_run(dna_path, genus, species):
     os.chdir(current_dir)
     return(job_id, varus_bam)
 
-def braker_run(dna_path,rna_path, genus, species):
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    #print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
+def braker_run(dna_path, rna_path, genus, species):
+    print("247. into the braker funcrion")
+    #config = configparser.ConfigParser()
+    #config.read("config.ini")
+    print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
     current_dir = os.getcwd()
-    #print("BRAKER3 current directory:", current_dir)
+    print("BRAKER3 current directory:", current_dir)
     new_dir = os.path.dirname(os.path.abspath(dna_path))
     os.chdir(new_dir)
-    #print("BRAKER3 new directory:", new_dir)
+    print("BRAKER3 new directory:", new_dir)
     w_dir = genus+"_"+species+"_braker"
     # get new current working directory
     if os.path.basename(rna_path) == "NNNN":
@@ -264,8 +266,8 @@ def braker_run(dna_path,rna_path, genus, species):
         rna_names  = ",".join(prefixes)
         rna_subline =  " --rnaseq_sets_ids="+rna_names+ " --rnaseq_sets_dirs="+os.path.dirname(os.path.abspath(rna_paths[0]))
 
-    #parse config file
-    augustus_bin_path = config.get('BRAKER', 'augustus_bin_path', fallback=None)
+    print("268. parse config file")
+    augustus_bin_path = config.get('BRAKER', 'augustus_bin_path')
     augustus_config_path = config.get('BRAKER', 'augustus_config_path')
     augustus_scripts_path = config.get('BRAKER', 'augustus_scripts_path')
     module_load = config.get('SLURM_ARGS', 'module_load')
@@ -281,9 +283,9 @@ def braker_run(dna_path,rna_path, genus, species):
     prothint_arg = f"--PROTHINT_PATH={prothint_path}" if prothint_path else ''
     genemark_arg = f"--GENEMARK_PATH={genemark_path}" if genemark_path else ''
     genemark_export = f"export PATH={genemark_path}/tools:$PATH" if genemark_path else ''
-    module_arg = f"--module={module_load}" if module_load else ''
+    module_arg = f"{module_load}" if module_load else ''
 
-
+    print("287. parse is done")
     slurm_braker = f"""#!/bin/bash
 #SBATCH -o braker.%j.%N.out
 #SBATCH -e braker.%j.%N.err
@@ -292,16 +294,19 @@ def braker_run(dna_path,rna_path, genus, species):
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
 #SBATCH -p {partitition}
+conda init bash
+conda activate base
 {genemark_export}
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
+
 
 {module_arg}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
 {diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
 --species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}"""
 
-    #print(slurm_braker)
+    print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.stdin.write(slurm_braker.encode())
     output, error = process.communicate()
@@ -373,7 +378,8 @@ def process_line(line):
                 # Extract the file to a temporary directory
                     zip_file.extract(filename, path="temp")
                     # Move the file from the temporary directory to the current directory
-                    shutil.move(os.path.join("temp", filename), ".")
+                    if not os.path.exists(os.path.join("temp", filename)):
+                        shutil.move(os.path.join("temp", filename), ".")
                     moved_file_path = os.path.join(os.path.basename(os.getcwd()), os.path.basename(filename))
                     print(f"File found and moved: {moved_file_path}")
                     dna_count = dna_count + 1
@@ -442,14 +448,17 @@ def process_line(line):
                             f.write(f"{name_id} : RepeatMasking fail with {RM_job_id}\n")
                         return("RepeatMasking fail")
 
-
+    short_header_dna, tr_table = rename_fasta(masked_dna_path)
+    print("renamed FASTA headers =", short_header_dna)
+    print("UNrenamed fasta headers = ", masked_dna_path)
     #print("masked_dna_path :", masked_dna_path)
     #print("rna_paths :", rna_paths)
     if rna_paths:
         print("RNA files are presented. No need to run VARUS...")
         rna_file = ','.join(map(str, rna_paths))
     else:
-        varus_job_id, rna_file = varus_run(masked_dna_path,genus,species)
+        varus_job_id, rna_file = varus_run(short_header_dna, genus, species)
+        print("460: ", varus_job_id, rna_file)
         time.sleep(10)
         while True:
             var_result = subprocess.run(['squeue', '-j', varus_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -462,16 +471,23 @@ def process_line(line):
                             f.write(f"{name_id} : VARUS finished successfully with {varus_job_id}. {rna_file}\n")
                         break
                     else:
-                        print("VARUS has failed. BAM file does not exist. Check the error file...")
+                        print("469 .VARUS has failed. BAM file does not exist. Check the error file...")
                         with open(error_path, 'a') as f:
                             f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                         varus_failed = True
-                        return("VARUS fail")
+                        break
+                else:
+                    print("475. VARUS has failed. BAM file does not exist. Check the error file...")
+                    with open(error_path, 'a') as f:
+                        f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
+                    varus_failed = True
+                    break
                         
-    #print("rna_file :", rna_file)
+    print("rna_file :", rna_file)
     print("____________________________________________________")
-    print("BRAKER run")
-    braker_job_id, gtf_file = braker_run(masked_dna_path, rna_file, genus, species)
+    print("BRAKER run for ", genus, species)
+    braker_job_id, gtf_file = braker_run(short_header_dna, rna_file, genus, species)
+    print("485. BRAKER job =", braker_job_id)
     while True:
         br_result = subprocess.run(['squeue', '-j', braker_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         br_output = br_result.stdout + br_result.stderr
@@ -503,13 +519,14 @@ def process_line(line):
 if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
-        table = [line.strip() for line in f.readlines()]
-    print(table)      
-    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
-  
-    with Pool() as pool:
-        pool.map(process_line, parts)
+        lines = [line.strip() for line in f.readlines()]
+    print(lines)
 
+    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
+    print (parts)            
+    with Pool() as pool:
+        for part in parts:
+            pool.map(process_line, part)
     # Close the pool and wait for all processes to finish
     pool.close()
     pool.join()
