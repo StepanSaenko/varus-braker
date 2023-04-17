@@ -256,6 +256,12 @@ def braker_run(dna_path, rna_path, genus, species):
     print("BRAKER3 new directory:", new_dir)
     w_dir = genus+"_"+species+"_braker"
     # get new current working directory
+    
+    if os.path.exists(f"{os.getcwd()}/{w_dir}/braker.gtf"):
+        os.chdir(current_dir)
+        print("BRAKER.gff is already exists")
+        return ("1", f"{os.getcwd()}/{w_dir}/braker.gtf")
+    
     if os.path.basename(rna_path) == "NNNN":
         #run BRAKER2
         rna_subline = ""
@@ -455,6 +461,7 @@ def process_line(line):
         RM_job_id, masked_dna_path = repeatmasking(dna_path, genus)
         while True:
             result = subprocess.run(['squeue', '-j', RM_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            time.sleep(1000)
             output = result.stdout + result.stderr
             if RM_job_id not in output:
                 if os.path.isabs(masked_dna_path):
@@ -483,6 +490,7 @@ def process_line(line):
         time.sleep(10)
         while True:
             var_result = subprocess.run(['squeue', '-j', varus_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            time.sleep(2000)
             var_output = var_result.stdout + var_result.stderr
             if varus_job_id not in var_output:
                 if os.path.isabs(rna_file):
@@ -515,6 +523,7 @@ def process_line(line):
     print("485. BRAKER job =", braker_job_id)
     while True:
         br_result = subprocess.run(['squeue', '-j', braker_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(10000)
         br_output = br_result.stdout + br_result.stderr
         if braker_job_id not in br_output:
             if os.path.isabs(gtf_file):
