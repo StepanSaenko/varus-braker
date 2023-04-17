@@ -461,7 +461,7 @@ def process_line(line):
         RM_job_id, masked_dna_path = repeatmasking(dna_path, genus)
         while True:
             result = subprocess.run(['squeue', '-j', RM_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            time.sleep(1000)
+            time.sleep(10000)
             output = result.stdout + result.stderr
             if RM_job_id not in output:
                 if os.path.isabs(masked_dna_path):
