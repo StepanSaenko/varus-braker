@@ -169,8 +169,8 @@ def varus_run(dna_path, genus, species):
     varus_path = config.get('VARUS', 'varus_path')
     hisat2_path = config.get('VARUS', 'hisat2_path')
     sratoolkit_path = config.get('VARUS', 'sratoolkit_path')
-    batchsize = config.get('VARUS', 'batchsize')
-    maxbatches = config.get('VARUS', 'maxbatches')
+    batchsize = str(config.get('VARUS', 'batchsize'))
+    maxbatches = str(config.get('VARUS', 'maxbatches'))
     
     hisat2_export_path = f"export PATH={hisat2_path}:$PATH" if hisat2_path else ""
     sratoolkit_export_path = f"export PATH={sratoolkit_path}:$PATH" if sratoolkit_path else ""
@@ -257,6 +257,7 @@ def braker_run(dna_path, rna_path, genus, species):
     w_dir = genus+"_"+species+"_braker"
     # get new current working directory
     if os.path.basename(rna_path) == "NNNN":
+        #run BRAKER2
         rna_subline = ""
     elif os.path.basename(rna_path)[-3:] == "bam":
         rna_subline = " --bam="+rna_path
@@ -374,6 +375,26 @@ def process_line(line):
         # Loop through each file in the archive
             for filename in zip_file.namelist():
             # If the file has a ".fna" extension, move it to the current directory and break out of the loop
+                if os.path.splitext(filename)[1] in [".fna", ".fasta", ".fa"]:
+                # Extract the file to a temporary directory
+                    zip_file.extract(filename, path = "temp")
+                    destination_file_path = os.path.join(os.getcwd(), os.path.basename(filename))
+                    # Move the file from the temporary directory to the current directory
+                    if not os.path.exists(destination_file_path):
+                        shutil.move(os.path.join("temp", filename), ".")
+                        moved_file_path = os.path.join(os.path.basename(os.getcwd()), os.path.basename(filename))
+                        print(f"File found and moved: {moved_file_path}")
+                        dna_count = dna_count + 1
+                        break
+                    else:
+                        moved_file_path = destination_file_path
+                        print(f"File {filename} already exists in the current directory.")
+                        break
+        """
+        with zipfile.ZipFile(zip_filename) as zip_file:
+        # Loop through each file in the archive
+            for filename in zip_file.namelist():
+            # If the file has a ".fna" extension, move it to the current directory and break out of the loop
                 if os.path.splitext(filename)[1] == ".fna" or os.path.splitext(filename)[1] == ".fasta" or os.path.splitext(filename)[1] == ".fa":
                 # Extract the file to a temporary directory
                     zip_file.extract(filename, path="temp")
@@ -383,7 +404,7 @@ def process_line(line):
                     moved_file_path = os.path.join(os.path.basename(os.getcwd()), os.path.basename(filename))
                     print(f"File found and moved: {moved_file_path}")
                     dna_count = dna_count + 1
-                    break
+                    break"""
         shutil.rmtree("temp")
         dna_path = moved_file_path
         os.chdir(current_dir)                
@@ -475,12 +496,16 @@ def process_line(line):
                         with open(error_path, 'a') as f:
                             f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                         varus_failed = True
+                        rna_paths = "NNNN"
+                        print("Will run BRAKER without RNA data. BRAKER2")
                         break
                 else:
                     print("475. VARUS has failed. BAM file does not exist. Check the error file...")
                     with open(error_path, 'a') as f:
                         f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                     varus_failed = True
+                    rna_paths = "NNNN"
+                    print("Will run BRAKER without RNA data. BRAKER2")
                     break
                         
     print("rna_file :", rna_file)
