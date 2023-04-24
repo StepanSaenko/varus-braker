@@ -84,9 +84,9 @@ partition = snowball
 cpus_per_task = 48
 module_load = module load bedtools
     module load singularity
-```    
+```  
 
-##Accuracies
+## Accuracies
 
 |                                      | Gene  |       | Transcript |       | Exon  |       |
 |:------------------------------------:|:-----:|:-----:|:----------:|:-----:|:-----:|:-----:|
