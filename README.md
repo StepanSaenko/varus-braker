@@ -125,4 +125,15 @@ module_load = module load bedtools
 | batchsize = 100000 maxbatches = 1000 | 57.99 | 85.98 |   46.81    | 76.42 | 77.89 | 94.07 |
 | batchsize = 200000 maxbatches = 500  | 57.93 | 86.27 |   46.75    | 76.64 | 77.69 | 94.11 |
 | batchsize = 200000 maxbatches = 1000 | 58.67 | 85.81 |   47.39    | 75.98 | 78.70 | 93.77 |
+|                                      |       |       |            |       |       |       |
+|        *Medicago truncatula*         |       |       |            |       |       |       |
+|  batchsize = 5000 maxbatches = 100   |   .   |   .   |     .      |   .   |   .   |   .   |
+|  batchsize = 50000 maxbatches = 100  | 31.20 | 77.14 |   31.20    | 67.48 | 59.70 | 92.72 |
+|  batchsize = 50000 maxbatches = 500  | 34.65 | 76.11 |   34.65    | 66.21 | 66.97 | 91.86 |
+| batchsize = 50000 maxbatches = 1000  | 35.31 | 75.40 |   35.31    | 65.38 | 68.26 | 91.32 |
+| batchsize = 100000 maxbatches = 100  | 32.84 | 76.90 |   32.84    | 67.23 | 63.16 | 92.47 |
+| batchsize = 100000 maxbatches = 500  | 35.24 | 75.48 |   35.24    | 65.43 | 68.19 | 91.29 |
+| batchsize = 100000 maxbatches = 1000 |   .   |   .   |     .      |   .   |   .   |   .   |
+| batchsize = 200000 maxbatches = 500  |   .   |   .   |     .      |   .   |   .   |   .   |
+| batchsize = 200000 maxbatches = 1000 | 35.91 | 73.52 |   35.91    | 63.44 | 69.85 | 90.03 |
 
