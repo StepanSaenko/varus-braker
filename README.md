@@ -114,3 +114,15 @@ module_load = module load bedtools
 | batchsize = 200000 maxbatches = 500  | 75.81 | 81.01 |   52.66    | 72.28 | 77.96 | 93.00 |
 | batchsize = 200000 maxbatches = 1000 | 76.41 | 80.76 |   53.08    | 72.01 | 78.68 | 92.84 |
 | batchsize = 150000 maxbatches = 2000 | 77.03 | 80.79 |   53.48    | 71.84 | 79.41 | 92.74 |
+|                                      |       |       |            |       |       |       |
+|        *Populus trichocarpa*         |       |       |            |       |       |       |
+|  batchsize = 5000 maxbatches = 100   | 22.47 | 81.52 |   17.76    | 75.67 | 25.05 | 93.96 |
+|  batchsize = 50000 maxbatches = 100  | 45.97 | 85.84 |   36.84    | 76.84 | 61.09 | 94.76 |
+|  batchsize = 50000 maxbatches = 500  | 55.22 | 86.81 |   44.52    | 77.22 | 73.99 | 94.52 |
+| batchsize = 50000 maxbatches = 1000  | 56.90 | 86.18 |   45.91    | 76.66 | 76.42 | 94.23 |
+| batchsize = 100000 maxbatches = 100  | 30.61 | 51.67 |   24.67    | 46.28 | 41.38 | 57.06 |
+| batchsize = 100000 maxbatches = 500  | 56.76 | 86.52 |   45.81    | 77.16 | 76.32 | 94.42 |
+| batchsize = 100000 maxbatches = 1000 | 57.99 | 85.98 |   46.81    | 76.42 | 77.89 | 94.07 |
+| batchsize = 200000 maxbatches = 500  | 57.93 | 86.27 |   46.75    | 76.64 | 77.69 | 94.11 |
+| batchsize = 200000 maxbatches = 1000 | 58.67 | 85.81 |   47.39    | 75.98 | 78.70 | 93.77 |
+
