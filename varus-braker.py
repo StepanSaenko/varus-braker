@@ -22,7 +22,7 @@ args = parser.parse_args()
 input_file_path = args.input
 partitition = config.get('SLURM_ARGS', 'partition')
 clade_list = ['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles']
-ortho_path = config.get('BRAKER', 'orthodb-clades') + '/species/'
+ortho_path = config.get('BRAKER', 'orthodb_path') + '/species/'
 excluded = config.get('BRAKER', 'excluded')
 
 main_dir = os.getcwd()
