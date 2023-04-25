@@ -15,13 +15,16 @@ import configparser
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
 parser.add_argument('--input', type=str, help='path to the input file, table should have column with species names, column with links to DNA-data, [optional] column with links to RNA-data',  default="list.txt")
-parser.add_argument('--clade', type=str,choices=['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles'], help='Choose a clade', default="arthropoda")
+#parser.add_argument('--clade', type=str,choices=['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles'], help='Choose a clade', default="arthropoda")
 config = configparser.ConfigParser()
 config.read('config.ini')
 args = parser.parse_args()
 input_file_path = args.input
-clade = args.clade
-partitition = config.get('SLURM_ARGS', 'partition') 
+partitition = config.get('SLURM_ARGS', 'partition')
+clade_list = ['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles']
+ortho_path = config.get('BRAKER', 'orthodb-clades') + '/species/'
+excluded = config.get('BRAKER', 'excluded')
+
 main_dir = os.getcwd()
 
 def remove_symbols_after_first_space(filename):
@@ -32,6 +35,47 @@ def remove_symbols_after_first_space(filename):
                 line = re.sub(" .*", "", line)
             lines.append(line)
     return lines
+
+def protein_data(species_name):
+    """
+    Choose the right protein data
+    """
+    subdirs = [f for f in os.listdir(ortho_path) if os.path.isdir(os.path.join(ortho_path, f))]
+    print(subdirs)
+    if species_name in subdirs:
+        print("Found")
+        print(subdirs[subdirs.index(species_name)])
+        protein_file = os.path.join(ortho_path, subdirs[subdirs.index(species_name)],excluded+"_excluded.fa")
+        if os.path.exists(protein_file):
+            return protein_file
+    # Find protein database
+    # Make a request to the NCBI ESearch API to get the taxon ID for the search term
+    esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+    esearch_params = {"db": "taxonomy", "term": species_name}
+    esearch_response = requests.get(esearch_url, params=esearch_params)
+    taxon_id = re.search(r"<Id>(\d+)</Id>", esearch_response.text).group(1)
+    # Make a request to the NCBI EFetch API to get the taxonomic lineage for the taxon ID
+    efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+    efetch_params = {"db": "taxonomy", "id": taxon_id, "retmode": "xml"}
+    efetch_response = requests.get(efetch_url, params=efetch_params)
+    lineage = re.search(r"<Lineage>(.*?)</Lineage>", efetch_response.text).group(1)
+    print(lineage)
+
+    clades = lineage.split("; ")
+    for i in range(len(clades)-1, -1, -1):
+        if clades[i].lower() in clade_list:
+            print("First matching clade from the right:", clades[i])
+            protein_file = clades[i].capitalize()+".fa"
+            break
+    if os.path.isfile(protein_file):
+        print(f"{protein_file} already exists in the directory.")
+    else:
+        subprocess.run(["wget", "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb11/"+clades[i].capitalize()+".fa.gz"])
+        subprocess.run(["gzip", "-d", clades[i].capitalize()+".fa.gz"])
+        protein_file = subprocess.run(["readlink", "-f", clades[i].capitalize()+".fa.gz"], stdout=subprocess.PIPE).stdout.decode().strip()
+    proteins_file_path = str(os.path.abspath(protein_file))
+    # Return the path to the 'proteins.fasta' file
+    return proteins_file_path
 
 def rename_fasta(input_file):
     """
@@ -66,18 +110,7 @@ def rename_fasta(input_file):
 
     return output_file, translation_table
 
-proteins_file = clade.capitalize()+".fa"
 
-#file from https://bioinf.uni-greifswald.de/bioinf/partitioned_odb11/Arthropoda.fa.gz
-if os.path.isfile(proteins_file):
-    print(f"{proteins_file} already exists in the directory.")
-else:
-    subprocess.run(["wget", "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb11/"+clade.capitalize()+".fa.gz"])
-    subprocess.run(["gzip", "-d", clade.capitalize()+".fa.gz"])
-    proteins_file = subprocess.run(["readlink", "-f", clade.capitalize()+".fa.gz"], stdout=subprocess.PIPE).stdout.decode().strip()
-proteins_file_path = str(os.path.abspath(proteins_file))
-# Print the path to the 'proteins.fasta' file
-print("Path to proteins.fasta:", proteins_file_path)
 
 omamerh5_file = "LUCA.h5"
 
@@ -244,7 +277,7 @@ def varus_run(dna_path, genus, species):
     os.chdir(current_dir)
     return(job_id, varus_bam)
 
-def braker_run(dna_path, rna_path, genus, species):
+def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
     print("247. into the braker funcrion")
     #config = configparser.ConfigParser()
     #config.read("config.ini")
@@ -340,6 +373,9 @@ def process_line(line):
     current_dir = os.getcwd()
     print("Current directory:", current_dir)
     name_id = str(genus) + '_' + str(species)
+    
+    protein_file_path = protein_data(name_id)
+    
     # create a directory with the name
     os.makedirs(name_id, exist_ok=True)
     results_path = os.path.join(name_id, RESULTS_FILE)
@@ -358,18 +394,23 @@ def process_line(line):
             pass
     print("links :",links)
     if len(links) > 0:
-        try:
-            urllib.request.urlretrieve(links[0], f"{name_id}/{os.path.basename(links[0])}")
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                dna_fail = True
+        if os.path.isabs(links[0]):
+                dna_path = links[0]
+                print("It is a local DNA-file!")
         else:
-            dna_path = f"{name_id}/{os.path.basename(links[0])}"
-            if dna_path.endswith(".gz"):
-                with gzip.open(dna_path, "rb") as gz_file:
-                    with open(dna_path[:-3], "wb") as unzipped_file:
-                        unzipped_file.write(gz_file.read())
-                dna_path = dna_path[:-3]
+            print("downloading DNA data :")
+            try:
+                urllib.request.urlretrieve(links[0], f"{name_id}/{os.path.basename(links[0])}")
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    dna_fail = True
+            else:
+                dna_path = f"{name_id}/{os.path.basename(links[0])}"
+        if dna_path.endswith(".gz") and not dna_fail:
+            with gzip.open(dna_path, "rb") as gz_file:
+                with open(dna_path[:-3], "wb") as unzipped_file:
+                    unzipped_file.write(gz_file.read())
+            dna_path = dna_path[:-3]
     if len(links) == 0 or dna_fail:
         print(name_id, " is empty or wrong link, trying to use ncbi-datasets")
         os.chdir(name_id)
@@ -395,6 +436,7 @@ def process_line(line):
                     else:
                         moved_file_path = destination_file_path
                         print(f"File {filename} already exists in the current directory.")
+                        dna_count = dna_count + 1
                         break
         """
         with zipfile.ZipFile(zip_filename) as zip_file:
@@ -519,7 +561,7 @@ def process_line(line):
     print("rna_file :", rna_file)
     print("____________________________________________________")
     print("BRAKER run for ", genus, species)
-    braker_job_id, gtf_file = braker_run(short_header_dna, rna_file, genus, species)
+    braker_job_id, gtf_file = braker_run(short_header_dna, rna_file, genus, species, protein_file_path)
     print("485. BRAKER job =", braker_job_id)
     while True:
         br_result = subprocess.run(['squeue', '-j', braker_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
