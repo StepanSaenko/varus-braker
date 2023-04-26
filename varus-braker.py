@@ -341,10 +341,10 @@ export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 
-mkdir /tmp/saenkos-${id}
-cp -r ./ /tmp/saenkos-${id}/
-cp {proteins_file_path} /tmp/saenkos-${id}/
-cd /tmp/saenkos-${id}/
+mkdir /tmp/saenkos-{id}
+cp -r ./ /tmp/saenkos-{id}/
+cp {proteins_file_path} /tmp/saenkos-{id}/
+cd /tmp/saenkos-{id}/
 
 {module_arg}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
@@ -352,8 +352,8 @@ cd /tmp/saenkos-${id}/
 --species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}
 
 cd -
-mv /tmp/saenkos-${id}/{w_dir} ./
-rm -rf /tmp/saenkos-${id}
+mv /tmp/saenkos-{id}/{w_dir} ./
+rm -rf /tmp/saenkos-{id}
 
     print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
