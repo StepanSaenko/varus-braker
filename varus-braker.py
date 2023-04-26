@@ -324,7 +324,7 @@ def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
     genemark_arg = f"--GENEMARK_PATH={genemark_path}" if genemark_path else ''
     genemark_export = f"export PATH={genemark_path}/tools:$PATH" if genemark_path else ''
     module_arg = f"{module_load}" if module_load else ''
-
+    id = random.randint(100, 10000)
     print("287. parse is done")
     slurm_braker = f"""#!/bin/bash
 #SBATCH -o braker.%j.%N.out
@@ -341,10 +341,19 @@ export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
 
+mkdir /tmp/saenkos-${id}
+cp -r ./ /tmp/saenkos-${id}/
+cp {proteins_file_path} /tmp/saenkos-${id}/
+cd /tmp/saenkos-${id}/
+
 {module_arg}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
 {diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
---species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}"""
+--species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}
+
+cd -
+mv /tmp/saenkos-${id}/{w_dir} ./
+rm -rf /tmp/saenkos-${id}
 
     print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
