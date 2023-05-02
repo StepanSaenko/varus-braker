@@ -354,7 +354,7 @@ cd /tmp/saenkos-{id}/
 cd -
 mv /tmp/saenkos-{id}/{w_dir} ./
 rm -rf /tmp/saenkos-{id}
-
+"""
     print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.stdin.write(slurm_braker.encode())
@@ -404,8 +404,12 @@ def process_line(line):
     print("links :",links)
     if len(links) > 0:
         if os.path.isabs(links[0]):
-                dna_path = links[0]
                 print("It is a local DNA-file!")
+                shutil.copy(links[0], os.path.join(os.getcwd(), name_id))
+                # Create a new pathway to the copied file in the directory
+                dna_path = f"{name_id}/{os.path.basename(links[0])}"
+                # Print the new file pathway
+                print(dna_path)
         else:
             print("downloading DNA data :")
             try:
