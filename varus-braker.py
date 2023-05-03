@@ -336,8 +336,7 @@ def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
 #SBATCH -N 1 # number of nodes
 #SBATCH -n 48
 #SBATCH -p {partitition}
-conda init bash
-conda activate base
+
 {genemark_export}
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
