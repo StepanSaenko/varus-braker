@@ -5,9 +5,11 @@ import urllib.request
 import urllib.error
 import gzip
 import re
+import requests
 import argparse
 import shutil
 import zipfile
+import random
 from multiprocessing.pool import Pool
 import configparser
 
@@ -404,12 +406,15 @@ def process_line(line):
     print("links :",links)
     if len(links) > 0:
         if os.path.isabs(links[0]):
-                print("It is a local DNA-file!")
+            print("It is a local DNA-file!")
+            destination_file = os.path.join(os.getcwd(), name_id, os.path.basename(links[0]))
+            if not os.path.exists(destination_file):
                 shutil.copy(links[0], os.path.join(os.getcwd(), name_id))
-                # Create a new pathway to the copied file in the directory
-                dna_path = f"{name_id}/{os.path.basename(links[0])}"
-                # Print the new file pathway
-                print(dna_path)
+            shutil.copy(links[0], destination_file)
+            # Create a new pathway to the copied file in the directory
+            dna_path = destination_file
+            # Print the new file pathway
+            print(dna_path)
         else:
             print("downloading DNA data :")
             try:
