@@ -245,7 +245,7 @@ def varus_run(dna_path, genus, species):
 #SBATCH -J varus
 #SBATCH --get-user-env
 #SBATCH -N 1 # number of nodes
-#SBATCH -n 48
+#SBATCH -n 36
 #SBATCH -p {partitition}
 {hisat2_export_path}
 {sratoolkit_export_path}
@@ -334,7 +334,7 @@ def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
 #SBATCH -J braker3
 #SBATCH --get-user-env
 #SBATCH -N 1 # number of nodes
-#SBATCH -n 48
+#SBATCH -n 36
 #SBATCH -p {partitition}
 
 {genemark_export}
@@ -349,7 +349,7 @@ cd /tmp/saenkos-{id}/
 
 {module_arg}
 {braker_cmd} {augustus_config_arg} {augustus_bin_arg} {augustus_scripts_arg} \
-{diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} \
+{diamond_arg} {prothint_arg} --softmasking --useexisting {genemark_arg} --threads 12 \
 --species={genus}_{species} --workingdir=./{w_dir} --prot_seq={proteins_file_path} --genome=./{os.path.basename(dna_path)} {rna_subline}
 
 cd -
