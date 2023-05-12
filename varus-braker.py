@@ -549,7 +549,6 @@ def process_line(line):
         time.sleep(10)
         while True:
             var_result = subprocess.run(['squeue', '-j', varus_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            time.sleep(2000)
             var_output = var_result.stdout + var_result.stderr
             if varus_job_id not in var_output:
                 if os.path.isabs(rna_file):
@@ -574,7 +573,7 @@ def process_line(line):
                     rna_paths = "NNNN"
                     print("Will run BRAKER without RNA data. BRAKER2")
                     break
-                        
+            time.sleep(2000)            
     print("rna_file :", rna_file)
     print("____________________________________________________")
     print("BRAKER run for ", genus, species)
@@ -582,7 +581,7 @@ def process_line(line):
     print("485. BRAKER job =", braker_job_id)
     while True:
         br_result = subprocess.run(['squeue', '-j', braker_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        time.sleep(10000)
+       
         br_output = br_result.stdout + br_result.stderr
         if braker_job_id not in br_output:
             if os.path.isabs(gtf_file):
@@ -608,7 +607,7 @@ def process_line(line):
                         f.write("________________________________________________\n")
                     braker_failed = True
                     return("BRAKER fail")
-
+        time.sleep(10000)
 if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
