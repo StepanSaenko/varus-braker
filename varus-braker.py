@@ -74,7 +74,7 @@ def protein_data(species_name):
     else:
         subprocess.run(["wget", "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb11/"+clades[i].capitalize()+".fa.gz"])
         subprocess.run(["gzip", "-d", clades[i].capitalize()+".fa.gz"])
-        protein_file = subprocess.run(["readlink", "-f", clades[i].capitalize()], stdout=subprocess.PIPE).stdout.decode().strip()
+        protein_file = subprocess.run(["readlink", "-f", clades[i].capitalize()+".fa"], stdout=subprocess.PIPE).stdout.decode().strip()
     proteins_file_path = str(os.path.abspath(protein_file))
     # Return the path to the 'proteins.fasta' file
     return proteins_file_path
