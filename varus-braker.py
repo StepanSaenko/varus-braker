@@ -612,9 +612,14 @@ if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
         lines = [line.strip() for line in f.readlines()]
+    processed_lines = []
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            processed_lines.append(line)    
     print(lines)
 
-    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
+    parts = [processed_lines[i:i+10] for i in range(0, len(processed_lines), 10)]
     print (parts)            
     with Pool() as pool:
         for part in parts:
