@@ -92,40 +92,40 @@ module_load = module load bedtools
 |:-------------------------------------------:|:-----:|:-----:|:----------:|:-----:|:-----:|:-----:|
 |                                             |  Sn   |  Sp   |     Sn     |  Sp   |  Sn   |  Sp   |
 |          *Caenorhabditis elegans*           |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 71.65 | 83.64 |   54.17    | 74.62 | 80.16 | 94.40 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 66.19 | 82.86 |   49.53    | 74.93 | 74.30 | 94.65 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 71.54 | 85.34 |   54.21    | 76.23 | 78.67 | 94.84 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 71.65 | 83.64 |   54.17    | 74.62 | 80.16 | 94.40 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 66.19 | 82.86 |   49.53    | 74.93 | 74.30 | 94.65 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 71.54 | 85.34 |   54.21    | 76.23 | 78.67 | 94.84 |
 |                                             |       |       |            |       |       |       |
 |           *Arabidopsis thaliana*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 82.63 | 82.86 |   57.66    | 77.95 | 82.44 | 93.96 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 82.54 | 82.96 |   57.58    | 78.09 | 82.20 | 94.01 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 82.64 | 83.08 |   57.64    | 78.14 | 82.12 | 94.08 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 82.63 | 82.86 |   57.66    | 77.95 | 82.44 | 93.96 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 82.54 | 82.96 |   57.58    | 78.09 | 82.20 | 94.01 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 82.64 | 83.08 |   57.64    | 78.14 | 82.12 | 94.08 |
 |                                             |       |       |            |       |       |       |
 |            *Populus trichocarpa*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 77.93 | 88.46 |   63.15    | 80.83 | 85.48 | 94.50 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 78.16 | 88.53 |   63.29    | 81.38 | 85.57 | 94.69 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 78.33 | 88.62 |   63.40    | 81.52 | 85.59 | 94.82 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 77.93 | 88.46 |   63.15    | 80.83 | 85.48 | 94.50 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 78.16 | 88.53 |   63.29    | 81.38 | 85.57 | 94.69 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 78.33 | 88.62 |   63.40    | 81.52 | 85.59 | 94.82 |
 |                                             |       |       |            |       |       |       |
 |            *Medicago truncatula*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 50.28 | 72.97 |   50.28    | 65.27 | 77.79 | 88.07 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 50.53 | 72.91 |   50.53    | 65.26 | 77.79 | 88.22 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 50.56 | 72.95 |   50.56    | 65.56 | 77.71 | 88.46 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 50.28 | 72.97 |   50.28    | 65.27 | 77.79 | 88.07 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 50.53 | 72.91 |   50.53    | 65.26 | 77.79 | 88.22 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 50.56 | 72.95 |   50.56    | 65.56 | 77.71 | 88.46 |
 |                                             |       |       |            |       |       |       |
 |         *Parasteatoda tepidariorum*         |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 49.02 | 59.55 |   41.56    | 53.45 | 55.76 | 86.67 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 46.47 | 59.71 |   39.07    | 53.89 | 51.97 | 87.24 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 49.02 | 59.55 |   41.56    | 53.45 | 55.76 | 86.67 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 46.47 | 59.71 |   39.07    | 53.89 | 51.97 | 87.24 |
 |                                             |       |       |            |       |       |       |
 |                *Danio rerio*                |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 56.67 | 69.55 |   35.42    | 66.57 | 66.07 | 91.98 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 56.79 | 70.72 |   35.36    | 67.76 | 65.34 | 92.60 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 56.84 | 71.11 |   35.30    | 68.06 | 65.85 | 92.73 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 56.67 | 69.55 |   35.42    | 66.57 | 66.07 | 91.98 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 56.79 | 70.72 |   35.36    | 67.76 | 65.34 | 92.60 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 56.84 | 71.11 |   35.30    | 68.06 | 65.85 | 92.73 |
 |                                             |       |       |            |       |       |       |
 |          *Drosophila Melanogaster*          |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 86.45 | 90.11 |   60.03    | 82.61 | 83.88 | 95.34 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 86.89 | 89.85 |   60.07    | 81.99 | 83.47 | 94.95 |
-|  batchsize = 75000 maxbatches = 600 = 45M   | 87.85 | 90.31 |   61.19    | 83.11 | 84.16 | 95.43 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 86.45 | 90.11 |   60.03    | 82.61 | 83.88 | 95.34 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 86.89 | 89.85 |   60.07    | 81.99 | 83.47 | 94.95 |
+|  batchsize = 75000 maxbatches = 600 Total = 45M   | 87.85 | 90.31 |   61.19    | 83.11 | 84.16 | 95.43 |
 |                                             |       |       |            |       |       |       |
 |           *Solanum lycopersicum*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 = 300M | 46.34 | 47.79 |   37.54    | 47.50 | 83.88 | 94.52 |
-| batchsize = 100000 maxbatches = 1000 = 100M | 46.23 | 47.76 |   37.43    | 47.42 | 83.40 | 94.47 |
+| batchsize = 1500000 maxbatches = 200 Total = 300M | 46.34 | 47.79 |   37.54    | 47.50 | 83.88 | 94.52 |
+| batchsize = 100000 maxbatches = 1000 Total = 100M | 46.23 | 47.76 |   37.43    | 47.42 | 83.40 | 94.47 |
 
