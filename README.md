@@ -55,9 +55,9 @@ varus-braker.py --input table.txt
 File config.ini should have pathways to all executables. 
 ```
 [VARUS]
-varus_path = /home/saenkos/VARUS2/VARUS
-hisat2_path = /home/saenkos/hisat2
-sratoolkit_path = /home/saenkos/sratoolkit.3.0.2-ubuntu64/bin
+varus_path = /home/user/VARUS2/VARUS
+hisat2_path = /home/user/hisat2
+sratoolkit_path = /home/user/sratoolkit.3.0.2-ubuntu64/bin
 batchsize = 100000
 maxbatches = 1000
 
