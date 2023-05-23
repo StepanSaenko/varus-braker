@@ -28,17 +28,25 @@ GeneMark-ETP https://github.com/gatech-genemark/GeneMark-ETP
 
 Input should be a table with at least 1 column:
 
-```
 See table_example.tbl
-Columns are divided by space or tab
+Columns are divided by tab
+You may use without DNA-link, will try to find genome in ncbi-databse.
+RNA-files should have "\_1" and "\_2" parts in names.
 
+```
 SPECIES_NAME DNA_LINK RNA_LINKS[optional,ID1_1,ID1_2,ID2_1,ID2_2 ... ]
-Drosophila melanogaster https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz   /home/saenkos/homework/try/SRR13030903_1.fastq,/home/saenkos/homework/try/SRR13030903_2.fastq
+Drosophila melanogaster https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz   /home/user/genomes/RNA/SRR13030903_1.fastq,/home/user/genomes/RNA/SRR13030903_2.fastq
 Tribolium castaneum     https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/335/GCF_000002335.3_Tcas5.2/GCF_000002335.3_Tcas5.2_genomic.fna.gz 
 Bombyx mori
+#You may add commentaries into the table and also use local files, need absolute path
+Drosophila Melanogaster /home/user/genomes/Drosophila/genome.fasta.masked
+Populus trichocarpa     /home/user/genomes/Populus/genome.fasta.masked
+Arabidopsis thaliana
+Caenorhabditis elegans
 
 
-varus-braker.py --input table.txt [optional] --batchsize 100000 --maxBatches 5000 --clade arthropoda
+
+varus-braker.py --input table.txt
 ```
 
 
@@ -47,10 +55,11 @@ varus-braker.py --input table.txt [optional] --batchsize 100000 --maxBatches 500
 File config.ini should have pathways to all executables. 
 ```
 [VARUS]
-varus_path = /home/saenkos/VARUS/VARUS2
+varus_path = /home/saenkos/VARUS2/VARUS
 hisat2_path = /home/saenkos/hisat2
 sratoolkit_path = /home/saenkos/sratoolkit.3.0.2-ubuntu64/bin
-
+batchsize = 100000
+maxbatches = 1000
 
 [BRAKER]
 braker_cmd = /home/saenkos/braker3/BRAKER/scripts/braker.pl 
@@ -60,11 +69,15 @@ augustus_scripts_path = /home/saenkos/Augustus/scripts
 diamond_path = /home/saenkos/
 prothint_path = /home/saenkos/ProtHint/bin
 genemark_path = /home/saenkos/GeneMark-ETP/bin
+orthodb_path = /home/saenkos/orthodb-clades
+excluded = species
+
 
 [SLURM_ARGS]
 partition = snowball
-cpus_per_task = 48
+cpus_per_task = 36
 module_load = module load bedtools
+
 ```
 
 In case using singularity containter :
@@ -85,6 +98,7 @@ cpus_per_task = 48
 module_load = module load bedtools
     module load singularity
 ```  
+Please choose the optimal batchsize and maxbatches values: huge batchsize could lead to increasing running time.
 
 ## Accuracies
 
