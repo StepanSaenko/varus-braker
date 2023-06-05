@@ -1,17 +1,23 @@
 import subprocess
 import time
+from time import sleep
 import os
 import urllib.request
 import urllib.error
 import gzip
+import bz2
+import tarfile
+import zipfile
+import rarfile
 import re
 import requests
 import argparse
 import shutil
-import zipfile
 import random
 from multiprocessing.pool import Pool
 import configparser
+from contextlib import closing
+
 
 #defaults
 
@@ -38,6 +44,34 @@ def remove_symbols_after_first_space(filename):
             lines.append(line)
     return lines
 
+def decompress_file(file_path):
+    if file_path.endswith(".gz"):
+        with gzip.open(file_path, "rb") as gz_file:
+            with open(file_path[:-3], "wb") as unzipped_file:
+                unzipped_file.write(gz_file.read())
+        file_path = file_path[:-3]
+    elif file_path.endswith(".bz2") or file_path.endswith(".bzip2"):
+        with bz2.open(file_path, "rb") as bz2_file:
+            with open(file_path[:-4], "wb") as uncompressed_file:
+                uncompressed_file.write(bz2_file.read())
+        file_path = file_path[:-4]
+    elif file_path.endswith(".tar"):
+        with tarfile.open(file_path, "r") as tar:
+            tar.extractall()
+        file_path = file_path[:-4]
+    elif file_path.endswith(".zip"):
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
+            zip_ref.extractall()
+        file_path = file_path[:-4]
+    elif file_path.endswith(".rar"):
+        with rarfile.RarFile(file_path, "r") as rar_ref:
+            rar_ref.extractall()
+        file_path = file_path[:-4]
+    else:
+        print("Uncompressed file of wrong archive format: ", file_path)
+    
+    return file_path
+
 def protein_data(species_name):
     """
     Choose the right protein data
@@ -54,13 +88,28 @@ def protein_data(species_name):
     # Make a request to the NCBI ESearch API to get the taxon ID for the search term
     esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     esearch_params = {"db": "taxonomy", "term": species_name}
+    delay = random.randint(1, 15)
+    sleep(delay)
     esearch_response = requests.get(esearch_url, params=esearch_params)
-    taxon_id = re.search(r"<Id>(\d+)</Id>", esearch_response.text).group(1)
+    print(esearch_response)
+    if "429" in esearch_response:
+        sleep(delay*2)
+        esearch_response = requests.get(esearch_url, params=esearch_params)
+         
+    match_tax = re.search(r"<Id>(\d+)</Id>", esearch_response.text)
+    if match_tax: 
+        taxon_id = match_tax.group(1)
+    else:
+        taxon_id = '2759'
     # Make a request to the NCBI EFetch API to get the taxonomic lineage for the taxon ID
     efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
     efetch_params = {"db": "taxonomy", "id": taxon_id, "retmode": "xml"}
     efetch_response = requests.get(efetch_url, params=efetch_params)
-    lineage = re.search(r"<Lineage>(.*?)</Lineage>", efetch_response.text).group(1)
+    lineage_init = re.search(r"<Lineage>(.*?)</Lineage>", efetch_response.text)
+    if lineage_init:
+        lineage = lineage_init.group(1)
+    else: 
+        lineage = 'cellular organisms; Eukaryota'
     print(lineage)
 
     clades = lineage.split("; ")
@@ -271,8 +320,8 @@ def varus_run(dna_path, genus, species):
         time.sleep(30)
         with open(varus_err, 'r') as f:
             lines = f.readlines()
-            if len(lines) >= 5 and ("500 Internal Server Error" in lines[3] or "ERROR 500: Internal Server Error." in lines[4]):
-                print("Server error 500. Waiting 300 seconds and trying again...")
+            if len(lines) >= 5 and ("500 Internal Server Error" in lines[3] or "ERROR 500: Internal Server Error." in lines[4] or "ERROR 429" in lines[4]):
+                print("Server error 500/429. Waiting 300 seconds and trying again...")
                 time.sleep(300)
                 continue
         break
@@ -381,8 +430,9 @@ def process_line(line):
     species = line_parts[1]
     links = line_parts[2:]
     current_dir = os.getcwd()
-    print("Current directory:", current_dir)
     name_id = str(genus) + '_' + str(species)
+    print("Current directory:", current_dir, " for species: ", name_id )
+    
     
     protein_file_path = protein_data(name_id)
     
@@ -402,7 +452,7 @@ def process_line(line):
     except FileNotFoundError:
         with open(error_path, 'w') as f:
             pass
-    print("links :",links)
+    print("links to files :",links)
     if len(links) > 0:
         if os.path.isabs(links[0]):
             print("It is a local DNA-file!")
@@ -423,11 +473,8 @@ def process_line(line):
                     dna_fail = True
             else:
                 dna_path = f"{name_id}/{os.path.basename(links[0])}"
-        if dna_path.endswith(".gz") and not dna_fail:
-            with gzip.open(dna_path, "rb") as gz_file:
-                with open(dna_path[:-3], "wb") as unzipped_file:
-                    unzipped_file.write(gz_file.read())
-            dna_path = dna_path[:-3]
+        if not dna_fail:
+            dna_path = decompress_file(dna_path)
     if len(links) == 0 or dna_fail:
         print(name_id, " is empty or wrong link, trying to use ncbi-datasets")
         os.chdir(name_id)
@@ -504,12 +551,8 @@ def process_line(line):
                             f.write(f"{name_id} : lost RNA data\n")
                 else:
                     rna_path = f"{name_id}/{os.path.basename(link)}"
-                    if rna_path.endswith(".gz"):
-                        with gzip.open(rna_path, "rb") as gz_file:
-                            with open(rna_path[:-3], "wb") as unzipped_file:
-                                unzipped_file.write(gz_file.read())
-                            rna_path = rna_path[:-3]
-                            rna_paths.append(rna_path)
+                    rna_path = decompress_file(rna_path)
+                    rna_paths.append(rna_path)
             #print("rna paths :", rna_paths)
             with open(results_path, 'a') as f:
                 f.write(f"{rna_paths}\n")
@@ -562,7 +605,7 @@ def process_line(line):
                         with open(error_path, 'a') as f:
                             f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                         varus_failed = True
-                        rna_paths = "NNNN"
+                        rna_file = "NNNN"
                         print("Will run BRAKER without RNA data. BRAKER2")
                         break
                 else:
@@ -570,10 +613,10 @@ def process_line(line):
                     with open(error_path, 'a') as f:
                         f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                     varus_failed = True
-                    rna_paths = "NNNN"
+                    rna_file = "NNNN"
                     print("Will run BRAKER without RNA data. BRAKER2")
                     break
-            time.sleep(2000)            
+            time.sleep(100)            
     print("rna_file :", rna_file)
     print("____________________________________________________")
     print("BRAKER run for ", genus, species)
@@ -607,19 +650,15 @@ def process_line(line):
                         f.write("________________________________________________\n")
                     braker_failed = True
                     return("BRAKER fail")
-        time.sleep(10000)
+                    break
+        time.sleep(100)
 if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
         lines = [line.strip() for line in f.readlines()]
-    processed_lines = []
-    for line in lines:
-        line = line.strip()
-        if line and not line.startswith('#'):
-            processed_lines.append(line)    
     print(lines)
 
-    parts = [processed_lines[i:i+10] for i in range(0, len(processed_lines), 10)]
+    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
     print (parts)            
     with Pool() as pool:
         for part in parts:
