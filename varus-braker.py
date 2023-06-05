@@ -616,7 +616,7 @@ def process_line(line):
                     rna_file = "NNNN"
                     print("Will run BRAKER without RNA data. BRAKER2")
                     break
-            time.sleep(100)            
+            time.sleep(1000)            
     print("rna_file :", rna_file)
     print("____________________________________________________")
     print("BRAKER run for ", genus, species)
@@ -651,14 +651,21 @@ def process_line(line):
                     braker_failed = True
                     return("BRAKER fail")
                     break
-        time.sleep(100)
+        time.sleep(10000)
 if __name__ == '__main__':
     with open(input_file_path, 'r') as f:
         next(f)
         lines = [line.strip() for line in f.readlines()]
-    print(lines)
-
-    parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
+    #print(lines)
+    processed_lines = []
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            processed_lines.append(line)    
+    print(processed_lines)
+    
+    parts = [processed_lines[i:i+10] for i in range(0, len(processed_lines), 10)]
+    #parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
     print (parts)            
     with Pool() as pool:
         for part in parts:
@@ -698,3 +705,4 @@ if __name__ == '__main__':
                         shutil.copyfileobj(infile, errfile)
 
     print("All done! Please check the results_sum.log and errors_sum.log files")
+
