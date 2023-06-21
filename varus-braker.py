@@ -1,3 +1,5 @@
+#!/usr/bin/env
+
 import subprocess
 import time
 from time import sleep
@@ -14,7 +16,7 @@ import requests
 import argparse
 import shutil
 import random
-from multiprocessing.pool import Pool
+from multiprocessing import Pool, Semaphore
 import configparser
 from contextlib import closing
 
@@ -23,7 +25,6 @@ from contextlib import closing
 
 parser = argparse.ArgumentParser(description='Run braker for the branch of species')
 parser.add_argument('--input', type=str, help='path to the input file, table should have column with species names, column with links to DNA-data, [optional] column with links to RNA-data',  default="list.txt")
-#parser.add_argument('--clade', type=str,choices=['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles'], help='Choose a clade', default="arthropoda")
 config = configparser.ConfigParser()
 config.read('config.ini')
 args = parser.parse_args()
@@ -32,7 +33,7 @@ partitition = config.get('SLURM_ARGS', 'partition')
 clade_list = ['metazoa', 'vertebrata', 'viridiplantae', 'arthropoda', 'eukaryota', 'fungi', 'stramenopiles']
 ortho_path = config.get('BRAKER', 'orthodb_path') + '/species/'
 excluded = config.get('BRAKER', 'excluded')
-
+JOB_LIST = []
 main_dir = os.getcwd()
 
 def remove_symbols_after_first_space(filename):
@@ -69,7 +70,7 @@ def decompress_file(file_path):
         file_path = file_path[:-4]
     else:
         print("Uncompressed file of wrong archive format: ", file_path)
-    
+        return ("Archive error")
     return file_path
 
 def protein_data(species_name):
@@ -77,10 +78,7 @@ def protein_data(species_name):
     Choose the right protein data
     """
     subdirs = [f for f in os.listdir(ortho_path) if os.path.isdir(os.path.join(ortho_path, f))]
-    print(subdirs)
     if species_name in subdirs:
-        print("Found")
-        print(subdirs[subdirs.index(species_name)])
         protein_file = os.path.join(ortho_path, subdirs[subdirs.index(species_name)],excluded+"_excluded.fa")
         if os.path.exists(protein_file):
             return protein_file
@@ -91,11 +89,11 @@ def protein_data(species_name):
     delay = random.randint(1, 15)
     sleep(delay)
     esearch_response = requests.get(esearch_url, params=esearch_params)
-    print(esearch_response)
+    #print(esearch_response)
     if "429" in esearch_response:
         sleep(delay*2)
         esearch_response = requests.get(esearch_url, params=esearch_params)
-         
+    #print("2nd try:", esearch_response)     
     match_tax = re.search(r"<Id>(\d+)</Id>", esearch_response.text)
     if match_tax: 
         taxon_id = match_tax.group(1)
@@ -110,15 +108,16 @@ def protein_data(species_name):
         lineage = lineage_init.group(1)
     else: 
         lineage = 'cellular organisms; Eukaryota'
-    print(lineage)
+    #print("114: lineage :", lineage, "for ", species_name)
 
     clades = lineage.split("; ")
     for i in range(len(clades)-1, -1, -1):
         if clades[i].lower() in clade_list:
-            print("First matching clade from the right:", clades[i])
+            #print("First matching clade from the right:", clades[i],  "for ", species_name)
             protein_file = clades[i].capitalize()+".fa"
             break
-    if os.path.isfile(protein_file):
+    print("protein file is: ", protein_file, "for ", species_name)
+    if os.path.exists(protein_file):
         print(f"{protein_file} already exists in the directory.")
     else:
         subprocess.run(["wget", "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb11/"+clades[i].capitalize()+".fa.gz"])
@@ -166,13 +165,13 @@ def rename_fasta(input_file):
 omamerh5_file = "LUCA.h5"
 
 if os.path.isfile(omamerh5_file):
-    print(f"{omamerh5_file} already exists in the directory.")
+    #print(f"{omamerh5_file} already exists in the directory.")
 else:
     subprocess.run(["wget", "https://omabrowser.org/All/LUCA.h5"])
     omamerh5_file = subprocess.run(["readlink", "-f", "LUCA.h5"], stdout=subprocess.PIPE).stdout.decode().strip()
 omamerh5_file_path = str(os.path.abspath(omamerh5_file))
 # Print the path to the 'proteins.fasta' file
-print("Path to LUCA.h5: ", omamerh5_file_path)
+#print("Path to LUCA.h5: ", omamerh5_file_path)
 
 def up_low(path):
 
@@ -181,15 +180,21 @@ def up_low(path):
     # Define a regular expression pattern to match lower-case DNA strings
     LOWER_PATTERN = r'^[acgtn\s]+$'
     # Open the fasta file
-    with open(path) as f:
+    #print("uplow path", path)
     # Read the contents of the file
-        fasta_contents = f.read()
-        if re.match(UPPER_PATTERN, fasta_contents):
-            return("upper")
-        elif re.match(LOWER_PATTERN, fasta_contents):
-            return("lower")
-        else:
-            return("mixed")
+    try:
+        with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+            fasta_contents = f.read() 
+        #fasta_contents = f.read()
+            if re.match(UPPER_PATTERN, fasta_contents):
+                return("upper")
+            elif re.match(LOWER_PATTERN, fasta_contents):
+                return("lower")
+            else:
+                return("mixed")
+    except UnicodeDecodeError as e:
+        print("Error reading the file:", str(e))
+        return("error")
 
 def repeatmasking(dna_path, genus):
 
@@ -242,8 +247,8 @@ def varus_run(dna_path, genus, species):
         # Delete the file
         os.remove(f"{new_current_dir}/varus.err")
         #print("File varus.err has been deleted")
-    else:
-        print("File varus.err does not exist")
+    #else:
+        #print("File varus.err does not exist")
     if os.path.exists(f"{new_current_dir}/{name_id}/VARUS.bam"):
         os.chdir(current_dir)
         print("varus.bam is already exists")
@@ -299,9 +304,6 @@ def varus_run(dna_path, genus, species):
 {hisat2_export_path}
 {sratoolkit_export_path}
 {varus_path}/runVARUS.pl --aligner=HISAT --readFromTable=0 --createindex=1 --latinGenus={genus} --latinSpecies={species} --speciesGenome={os.path.basename(dna_path)} --logfile=varus.log 2>varus.err"""
-    #print(slurm_varus)
-    #print("_______________________")
-    #print(slurm_varus)
     while True:
         process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.stdin.write(slurm_varus.encode())
@@ -329,15 +331,10 @@ def varus_run(dna_path, genus, species):
     return(job_id, varus_bam)
 
 def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
-    print("247. into the braker funcrion")
-    #config = configparser.ConfigParser()
-    #config.read("config.ini")
-    print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
+    #print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
     current_dir = os.getcwd()
-    print("BRAKER3 current directory:", current_dir)
     new_dir = os.path.dirname(os.path.abspath(dna_path))
     os.chdir(new_dir)
-    print("BRAKER3 new directory:", new_dir)
     w_dir = genus+"_"+species+"_braker"
     # get new current working directory
     
@@ -357,7 +354,6 @@ def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
         rna_names  = ",".join(prefixes)
         rna_subline =  " --rnaseq_sets_ids="+rna_names+ " --rnaseq_sets_dirs="+os.path.dirname(os.path.abspath(rna_paths[0]))
 
-    print("268. parse config file")
     augustus_bin_path = config.get('BRAKER', 'augustus_bin_path')
     augustus_config_path = config.get('BRAKER', 'augustus_config_path')
     augustus_scripts_path = config.get('BRAKER', 'augustus_scripts_path')
@@ -376,7 +372,6 @@ def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
     genemark_export = f"export PATH={genemark_path}/tools:$PATH" if genemark_path else ''
     module_arg = f"{module_load}" if module_load else ''
     id = random.randint(100, 10000)
-    print("287. parse is done")
     slurm_braker = f"""#!/bin/bash
 #SBATCH -o braker.%j.%N.out
 #SBATCH -e braker.%j.%N.err
@@ -405,7 +400,7 @@ cd -
 mv /tmp/saenkos-{id}/{w_dir} ./
 rm -rf /tmp/saenkos-{id}
 """
-    print(slurm_braker)
+    #print(slurm_braker)
     process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.stdin.write(slurm_braker.encode())
     output, error = process.communicate()
@@ -417,6 +412,33 @@ rm -rf /tmp/saenkos-{id}
     os.chdir(current_dir)
     return(job_id,gtf_file)
 
+def busco_run(braker_dir, out_name):
+    slurm_busco = f"""#!/bin/bash
+#SBATCH -o busco.%j.%N.out
+#SBATCH -e busco.%j.%N.err
+#SBATCH -J busco
+#SBATCH --get-user-env
+#SBATCH -N 1 # number of nodes
+#SBATCH -n 36
+#SBATCH -p {partitition}
+    
+    
+export LC_CTYPE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export NUMEXPR_MAX_THREADS=48
+
+cd {braker_dir}
+busco  -i braker.codingseq -c 16 -m geno -f --out ./BUSCO/{out_name} --auto-lineage-euk
+
+"""
+    process = subprocess.Popen(['sbatch'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.stdin.write(slurm_busco.encode())
+    output, error = process.communicate()
+    busco_job_id = re.search(r"\d+", output.decode().strip()).group()
+    
+    process.stdin.close()
+    return(busco_job_id)
+
 def process_line(line):
     RESULTS_FILE = "results.log"
     ERROR_FILE = "errors.log"
@@ -425,15 +447,15 @@ def process_line(line):
     dna_fail = False
     rna_fail = False
     dna_count = 0
-    line_parts = line.split()
+    line_parts = re.split(r'\s+|\t+',str(line))
     genus = line_parts[0]
     species = line_parts[1]
     links = line_parts[2:]
     current_dir = os.getcwd()
     name_id = str(genus) + '_' + str(species)
-    print("Current directory:", current_dir, " for species: ", name_id )
-    
-    
+    #print("Current directory:", current_dir, " for species: ", name_id )
+    JOB_LIST.append(name_id) 
+
     protein_file_path = protein_data(name_id)
     
     # create a directory with the name
@@ -452,7 +474,7 @@ def process_line(line):
     except FileNotFoundError:
         with open(error_path, 'w') as f:
             pass
-    print("links to files :",links)
+    #print("links to files :",links)
     if len(links) > 0:
         if os.path.isabs(links[0]):
             print("It is a local DNA-file!")
@@ -463,14 +485,30 @@ def process_line(line):
             # Create a new pathway to the copied file in the directory
             dna_path = destination_file
             # Print the new file pathway
-            print(dna_path)
+            #print(dna_path)
         else:
             print("downloading DNA data :")
+            #filename = os.path.basename(links[0])
             try:
-                urllib.request.urlretrieve(links[0], f"{name_id}/{os.path.basename(links[0])}")
-            except urllib.error.HTTPError as e:
-                if e.code == 404:
-                    dna_fail = True
+                response = requests.get(links[0], allow_redirects=True, timeout=300)
+                               
+                # Retrieve the filename from the response headers
+                filename = os.path.basename(response.url)
+                response.raise_for_status()
+                dna_path = os.path.join(name_id, filename.split("?")[0])
+                if not os.path.exists(dna_path):
+                    with open(dna_path, "wb") as file:
+                        file.write(response.content)
+                #urllib.request.urlretrieve(links[0], f"{name_id}/{os.path.basename(links[0])}")
+            except requests.Timeout:
+                print("Request timed out. Aborting.")
+                dna_fail = True
+            except requests.HTTPError as e:
+                print("HTTP error occurred:", str(e))
+                dna_fail = True
+            except requests.RequestException as e:
+                print("An error occurred:", str(e))
+                dna_fail = True
             else:
                 dna_path = f"{name_id}/{os.path.basename(links[0])}"
         if not dna_fail:
@@ -494,7 +532,7 @@ def process_line(line):
                     if not os.path.exists(destination_file_path):
                         shutil.move(os.path.join("temp", filename), ".")
                         moved_file_path = os.path.join(os.path.basename(os.getcwd()), os.path.basename(filename))
-                        print(f"File found and moved: {moved_file_path}")
+                        #print(f"File found and moved: {moved_file_path}")
                         dna_count = dna_count + 1
                         break
                     else:
@@ -514,7 +552,7 @@ def process_line(line):
                     if not os.path.exists(os.path.join("temp", filename)):
                         shutil.move(os.path.join("temp", filename), ".")
                     moved_file_path = os.path.join(os.path.basename(os.getcwd()), os.path.basename(filename))
-                    print(f"File found and moved: {moved_file_path}")
+                    #print(f"File found and moved: {moved_file_path}")
                     dna_count = dna_count + 1
                     break"""
         shutil.rmtree("temp")
@@ -526,6 +564,7 @@ def process_line(line):
             with open(error_path, 'a') as f:
                 f.write(f"{name_id} : lost DNA data\n")
             os.chdir(current_dir)
+            JOB_LIST.remove(name_id) 
             return("DNA fail.")          
         #RNA processing        
     with open(results_path, 'a') as f:
@@ -556,14 +595,20 @@ def process_line(line):
             #print("rna paths :", rna_paths)
             with open(results_path, 'a') as f:
                 f.write(f"{rna_paths}\n")
-    if up_low(dna_path) == "mixed":
+    if up_low(dna_path) == "error":
+        print("Something wrong with fasta file : ", name_id, " Check the error file...")
+        with open(error_path, 'a') as f:
+            f.write(f"{name_id} : something wrong with fasta\n")
+        return 0
+    elif up_low(dna_path) == "mixed":
         print("Mixed case in DNA file. No need to run RepeatMasker...")
         masked_dna_path = dna_path
     else:
+        print("running RepeatMasker for ... ", name_id)
         RM_job_id, masked_dna_path = repeatmasking(dna_path, genus)
         while True:
             result = subprocess.run(['squeue', '-j', RM_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            time.sleep(10000)
+            time.sleep(5000)
             output = result.stdout + result.stderr
             if RM_job_id not in output:
                 if os.path.isabs(masked_dna_path):
@@ -579,16 +624,12 @@ def process_line(line):
                         return("RepeatMasking fail")
 
     short_header_dna, tr_table = rename_fasta(masked_dna_path)
-    print("renamed FASTA headers =", short_header_dna)
-    print("UNrenamed fasta headers = ", masked_dna_path)
-    #print("masked_dna_path :", masked_dna_path)
-    #print("rna_paths :", rna_paths)
     if rna_paths:
         print("RNA files are presented. No need to run VARUS...")
         rna_file = ','.join(map(str, rna_paths))
     else:
         varus_job_id, rna_file = varus_run(short_header_dna, genus, species)
-        print("460: ", varus_job_id, rna_file)
+        print("VARUS is runnig with ", varus_job_id, ", .bam file will be: ", rna_file)
         time.sleep(10)
         while True:
             var_result = subprocess.run(['squeue', '-j', varus_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -601,7 +642,7 @@ def process_line(line):
                             f.write(f"{name_id} : VARUS finished successfully with {varus_job_id}. {rna_file}\n")
                         break
                     else:
-                        print("469 .VARUS has failed. BAM file does not exist. Check the error file...")
+                        print("VARUS has failed. BAM file does not exist. Check the error file...")
                         with open(error_path, 'a') as f:
                             f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                         varus_failed = True
@@ -609,19 +650,20 @@ def process_line(line):
                         print("Will run BRAKER without RNA data. BRAKER2")
                         break
                 else:
-                    print("475. VARUS has failed. BAM file does not exist. Check the error file...")
+                    print("VARUS has failed. BAM file does not exist. Check the error file...")
                     with open(error_path, 'a') as f:
                         f.write(f"{name_id} : VARUS failed with {varus_job_id}\n")
                     varus_failed = True
                     rna_file = "NNNN"
                     print("Will run BRAKER without RNA data. BRAKER2")
                     break
-            time.sleep(1000)            
+            time.sleep(600)            
     print("rna_file :", rna_file)
-    print("____________________________________________________")
+    #print("____________________________________________________")
     print("BRAKER run for ", genus, species)
     braker_job_id, gtf_file = braker_run(short_header_dna, rna_file, genus, species, protein_file_path)
-    print("485. BRAKER job =", braker_job_id)
+    print("BRAKER3 job =", braker_job_id)
+    
     while True:
         br_result = subprocess.run(['squeue', '-j', braker_job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
        
@@ -632,14 +674,17 @@ def process_line(line):
                     print("BRAKER is done. GTF file exists")
                     with open(results_path, 'a') as f:
                         f.write(f"{name_id} : BRAKER finished successfully with {braker_job_id}. {gtf_file}\n")
-                        f.write("____________________________________________________\n")
+                        #f.write("____________________________________________________\n")
                     print("check the quality using files braker.aa (protein) and braker.codingseq(codingseq)")
                     #omark_dir = name_id+'_OMArk'
                     #omark_command = f"omark.py -f '{name_id}/{name_id}_braker/braker.codingseq' -d LUCA.h5 -o '{name_id}/{omark_dir}'"
                     #subprocess.run(omark_command, stdout=subprocess.PIPE, shell=True)
                     """We need to wait ~ a week until OMArk will update for python 3.11"""
-                    busco_dir = name_id+'_BUSCO'
-                    busco_command = f"busco  -i ./{name_id}/{name_id}_braker/braker.codingseq -c 16 -m geno -f --out ./{name_id}/{busco_dir} --auto-lineage-euk"
+                    bsc_job_id = busco_run(f"./{name_id}/{name_id}_braker/", name_id)
+                    with open(results_path, 'a') as f:
+                        f.write(f"{name_id} : BUSCO lauhcned with {bsc_job_id}\n")
+                    #busco_dir = name_id+'_BUSCO'
+                    #busco_command = f"busco  -i ./{name_id}/{name_id}_braker/braker.codingseq -c 16 -m geno -f --out ./{name_id}/{busco_dir} --auto-lineage-euk"
                     #print(busco_command)
                     #subprocess.run(busco_command, stdout=subprocess.PIPE, shell=True)
                     break
@@ -649,10 +694,19 @@ def process_line(line):
                         f.write(f"{name_id} : BRAKER failed with {braker_job_id}\n")
                         f.write("________________________________________________\n")
                     braker_failed = True
+                    JOB_LIST.remove(name_id) 
                     return("BRAKER fail")
                     break
-        time.sleep(10000)
+        time.sleep(6000)
+
+def process_with_semaphore(part):
+    with semaphore:
+        sleep(35)
+        process_line(part)
+        
 if __name__ == '__main__':
+    MAX_PARALLEL_JOBS = 25
+    semaphore = Semaphore(MAX_PARALLEL_JOBS)
     with open(input_file_path, 'r') as f:
         next(f)
         lines = [line.strip() for line in f.readlines()]
@@ -662,17 +716,19 @@ if __name__ == '__main__':
         line = line.strip()
         if line and not line.startswith('#'):
             processed_lines.append(line)    
-    print(processed_lines)
+    #print(processed_lines)
     
-    parts = [processed_lines[i:i+10] for i in range(0, len(processed_lines), 10)]
+    parts = [processed_lines]
     #parts = [lines[i:i+10] for i in range(0, len(lines), 10)]
-    print (parts)            
+    #print (parts)            
     with Pool() as pool:
-        for part in parts:
-            pool.map(process_line, part)
+        for part in processed_lines:
+            sleep(35)
+            pool.apply_async(process_with_semaphore, (part,))
+            #pool.map(process_line, part)
     # Close the pool and wait for all processes to finish
-    pool.close()
-    pool.join()
+        pool.close()
+        pool.join()
 
     # Save the results to an output file
 
@@ -705,4 +761,3 @@ if __name__ == '__main__':
                         shutil.copyfileobj(infile, errfile)
 
     print("All done! Please check the results_sum.log and errors_sum.log files")
-
