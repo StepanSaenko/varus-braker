@@ -43,9 +43,10 @@ Drosophila Melanogaster /home/user/genomes/Drosophila/genome.fasta.masked
 Populus trichocarpa     /home/user/genomes/Populus/genome.fasta.masked
 Arabidopsis thaliana
 Caenorhabditis elegans
+```
 
-
-
+Command line:
+```
 varus-braker.py --input table.txt
 ```
 
