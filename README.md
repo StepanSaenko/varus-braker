@@ -56,7 +56,7 @@ varus-braker.py --input table.txt
 File config.ini should have pathways to all executables. 
 ```
 [VARUS]
-varus_path = /home/user/VARUS2/VARUS
+varus_path = /home/user/VARUS
 hisat2_path = /home/user/hisat2
 sratoolkit_path = /home/user/sratoolkit.3.0.2-ubuntu64/bin
 batchsize = 100000
@@ -84,14 +84,17 @@ module_load = module load bedtools
 In case using singularity containter :
 ```
 [VARUS]
-varus_path = /home/user/VARUS/VARUS2
+varus_path = /home/user/VARUS/
 hisat2_path = /home/user/hisat2
 sratoolkit_path = /home/user/sratoolkit.3.0.2-ubuntu64/bin
+batchsize = 100000
+maxbatches = 1000
 
 
 [BRAKER]
 braker_cmd = singularity exec braker.sif braker.pl 
 genemark_path = /home/user/GeneMark-ETP/bin
+excluded = species
 
 [SLURM_ARGS]
 partition = snowball
