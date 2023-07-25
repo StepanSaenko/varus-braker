@@ -165,7 +165,7 @@ def rename_fasta(input_file):
 omamerh5_file = "LUCA.h5"
 
 if os.path.isfile(omamerh5_file):
-    #print(f"{omamerh5_file} already exists in the directory.")
+    print(f"{omamerh5_file} already exists in the directory.")
 else:
     subprocess.run(["wget", "https://omabrowser.org/All/LUCA.h5"])
     omamerh5_file = subprocess.run(["readlink", "-f", "LUCA.h5"], stdout=subprocess.PIPE).stdout.decode().strip()
