@@ -70,7 +70,7 @@ def decompress_file(file_path):
         file_path = file_path[:-4]
     else:
         print("Uncompressed file of wrong archive format: ", file_path)
-        return ("Archive error")
+        return (file_path)
     return file_path
 
 def protein_data(species_name):
