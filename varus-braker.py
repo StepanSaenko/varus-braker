@@ -319,16 +319,19 @@ def varus_run(dna_path, genus, species):
         while not os.path.exists(varus_err):
             time.sleep(30)
             continue
-        time.sleep(30)
+        time.sleep(240)
         with open(varus_err, 'r') as f:
-            lines = f.readlines()
-            if len(lines) >= 5 and ("500 Internal Server Error" in lines[3] or "ERROR 500: Internal Server Error." in lines[4] or "ERROR 429" in lines[4]):
-                print("Server error 500/429. Waiting 300 seconds and trying again...")
-                time.sleep(300)
-                continue
+            content = f.read()          
+        if "error 200" in content or "error 500" in content or "error 429" in content:
+                #if len(lines) >= 5 and ("500 Internal Server Error" in lines[3] or "ERROR 500: Internal Server Error." in lines[4] or "ERROR 429" in lines[4]):
+            print("Server error 500/429. Waiting 300 seconds and trying again...")
+            subprocess.run(['scancel ', job_id], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            time.sleep(300)
+            continue
         break
     os.chdir(current_dir)
     return(job_id, varus_bam)
+
 
 def braker_run(dna_path, rna_path, genus, species, proteins_file_path):
     #print("braker_parameters : 1: ",dna_path,"2: ",genus,species,"3: ",rna_path, "->",os.path.basename(rna_path))
@@ -513,11 +516,35 @@ def process_line(line):
                 dna_path = f"{name_id}/{os.path.basename(links[0])}"
         if not dna_fail:
             dna_path = decompress_file(dna_path)
+            
     if len(links) == 0 or dna_fail:
         print(name_id, " is empty or wrong link, trying to use ncbi-datasets")
         os.chdir(name_id)
         organism = str(genus) + ' ' + str(species)
-        subprocess.run(["datasets", "download", "genome", "taxon", organism, "--reference"], capture_output=True)
+        while True:
+            try:
+                completed_process = subprocess.run(
+                    ["datasets", "download", "genome", "taxon", organism, "--reference"],
+                    capture_output=True,
+                    text=True,  # This is important to get the output as text
+                    check=True   # This will raise a CalledProcessError if the command returns a non-zero exit status
+                )
+            except subprocess.CalledProcessError as e:
+                error_message = e.stderr.strip()  # Capturing the error message
+                if "Error: No assemblies found that match selection" in error_message:
+                    print("No matching assemblies found.")
+                    os.chdir(current_dir)
+                    JOB_LIST.remove(name_id) 
+                    return("NCBI datasets fail.")
+                elif "Error: Internal error (invalid zip archive). Please try again" in error_message:
+                    print("Internal error with zip archive. Retrying...")
+                    continue  # Retry the subprocess
+                else:
+                    print("An error occurred:", error_message)
+                    os.chdir(current_dir)
+                    JOB_LIST.remove(name_id) 
+                    return("NCBI datasets fail.")
+            break
         time.sleep(20)
         zip_filename = "ncbi_dataset.zip"
         with zipfile.ZipFile(zip_filename) as zip_file:
