@@ -4,25 +4,26 @@ Small pipeline combining raw genome-data and VARUS.bam (or RNA-seq data) and run
 
 ## Software dependencies
 
-
-BRAKER3 from https://github.com/Gaius-Augustus/BRAKER
-
-The best way to use singularity container:
+Pull all required docker containers with singularity:
 
 ```
-singularity build braker3.sif docker://teambraker/braker3:latest
+./build_singularity_images.sh
 ```
 
 VARUS from https://github.com/Gaius-Augustus/VARUS
 
-BUSCO from https://busco.ezlab.org/
+(BUSCO from https://busco.ezlab.org/ is on busco.sif)
 
 hisat2 https://github.com/DaehwanKimLab/hisat2
 
 sra-toolkit https://github.com/ncbi/sra-tools requeired version >= 3.0.2 \
 **Important: GeneMark-ETP has sra-tools included, but v3.0.1**
 
-GeneMark-ETP https://github.com/gatech-genemark/GeneMark-ETP
+(GeneMark-ETP https://github.com/gatech-genemark/GeneMark-ETP is in the braker3.sif)
+
+(RepeatModeler2/RepeatMasker is in tetools.sif)
+
+
 
 ## Usage
 
