@@ -395,22 +395,11 @@ rule find_protein_data:
         echo {wildcards.species}
         subdirs=($(ls ./ | grep -x {wildcards.species}))
         echo $subdirs
-        if [ ! -z "$subdirs" ]; then
-            protein_file=./$subdirs/{params.excluded}_excluded.fa
-            if [ -f $protein_file ]; then
-                echo "Protein file found locally"
-                ln -s $protein_file {output.protein_file}
-                exit 0
-            fi
-        fi
-        
-        echo $protein_file
+
         # Fallback to fetching data
-        #echo ("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=taxonomy&term=$species_name" | grep -oP '(?<=<Id>)[^<]+')
         taxon_id=$(curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=taxonomy&term=$species_name" | grep -oP '(?<=<Id>)[^<]+')
         echo $taxon_id
         taxon_id=${{taxon_id:-2759}}
-        echo $taxon_id
         lineage=$(curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&id=$taxon_id&retmode=xml" | grep -oP '(?<=<Lineage>)[^<]+')
         lineage=${{lineage:-cellular organisms; Eukaryota}}
         echo $lineage
