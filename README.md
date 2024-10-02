@@ -1,150 +1,131 @@
-## varus-braker
-Small pipeline combining raw genome-data and VARUS.bam (or RNA-seq data) and run BRAKER3
+# braker-snake
 
+Simple snakemake workflows for handling BRAKER on large data sets to prepare training data for Tiberius.
 
-## Software dependencies
+**Warning:** This is a not a released software package, it comes without support. We use this workflow internally for bulk genome annotation and it was customized to our needs.
 
-Pull all required docker containers with singularity:
+Data preparation workflow:
 
-```
-./build_singularity_images.sh
-```
+1. Download the available assemblies for taxa from NCBI
+2. Prioritize in case of species duplications (first choice: reference genome, second choice: max N50)
+3. Separate into annotated and un-annotated genomes
+4. Download the respective data sets from NCBI datasets (either genome only, or genome, annotation, proteins)
+5. Download OrthoDB partitions
+6. Check availability of RNA-Seq data for all downloaded genomes
+7. Download at most N RNA-Seq libraries (VARUS idea was discarded)
+8. Align RNA-Seq libraries
+9. Discard bad libraries with now alignment rate
+10. Postprocess the aligned libraries to serve as input for BRAKER (merge, sort, index)
+11. Output a csv table per taxon that can be merged over all taxa in order to launch the annotation workflow
 
-VARUS from https://github.com/Gaius-Augustus/VARUS
+Annotation workflow
 
-(BUSCO from https://busco.ezlab.org/ is on busco.sif)
+1. Mask genomes with RepeatModeler/RepeatMasker (since RED does not have diatom/protist data)
+2. Run BRAKER depending on the input as BRAKER3 or BRAKER2
+3. Run BUSCO on all the protein data sets and compile a summary
 
-hisat2 https://github.com/DaehwanKimLab/hisat2
+## Installation
 
-sra-toolkit https://github.com/ncbi/sra-tools requeired version >= 3.0.2 \
-**Important: GeneMark-ETP has sra-tools included, but v3.0.1**
+Go do a directory where you have space for many GBs of data. Clone the repository:
 
-(GeneMark-ETP https://github.com/gatech-genemark/GeneMark-ETP is in the braker3.sif)
+```git clone https://github.com/KatharinaHoff/braker-snake.git```
 
-(RepeatModeler2/RepeatMasker is in tetools.sif)
-
-
-
-## Usage
-
-Input should be a table with at least 1 column:
-
-See table_example.tbl
-Columns are divided by tab
-You may use without DNA-link, will try to find genome in ncbi-databse.
-RNA-files should have "\_1" and "\_2" parts in names.
+Python dependencies (this workflow cannot execute with a singularity container of snakemake due to problems with SLURM communication):
 
 ```
-SPECIES_NAME DNA_LINK RNA_LINKS[optional,ID1_1,ID1_2,ID2_1,ID2_2 ... ]
-Drosophila melanogaster https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/215/GCF_000001215.4_Release_6_plus_ISO1_MT/GCF_000001215.4_Release_6_plus_ISO1_MT_genomic.fna.gz   /home/user/genomes/RNA/SRR13030903_1.fastq,/home/user/genomes/RNA/SRR13030903_2.fastq
-Tribolium castaneum     https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/335/GCF_000002335.3_Tcas5.2/GCF_000002335.3_Tcas5.2_genomic.fna.gz 
-Bombyx mori
-#You may add commentaries into the table and also use local files, need absolute path
-Drosophila Melanogaster /home/user/genomes/Drosophila/genome.fasta.masked
-Populus trichocarpa     /home/user/genomes/Populus/genome.fasta.masked
-Arabidopsis thaliana
-Caenorhabditis elegans
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+source ~/.bashrc # to activate miniconda
+conda install -n base -c conda-forge mamba
+mamba create -c conda-forge -c bioconda -n snakemake snakemake
+mamba activate snakemake
+pip install snakemake-executor-plugin-slurm
 ```
 
-Command line:
-```
-varus-braker.py --input table.txt
-```
-
+Bash dependencies (are usually available on the HPC in Greifswald): singularity, curl, zcat, unzip, rm, echo, mkdir, cat, sed, ...
 
 ## Configuration
 
-File config.ini should have pathways to all executables. 
-```
-[VARUS]
-varus_path = /home/user/VARUS
-hisat2_path = /home/user/hisat2
-sratoolkit_path = /home/user/sratoolkit.3.0.2-ubuntu64/bin
-batchsize = 100000
-maxbatches = 1000
+### config_dataprep.ini & config_annotate.ini
 
-[BRAKER]
-braker_cmd = /home/user/braker3/BRAKER/scripts/braker.pl 
-augustus_config_path = /home/user/Augustus/config
-augustus_bin_path = /home/user/Augustus/bin
-augustus_scripts_path = /home/user/Augustus/scripts
-diamond_path = /home/user/
-prothint_path = /home/user/ProtHint/bin
-genemark_path = /home/user/GeneMark-ETP/bin
-orthodb_path = /home/user/orthodb-clades
-excluded = species
+Contents of the config files are important, adjust before running! Only execute worklows in a place where you have unlimited space. The output is huge.
 
+### ~/profile/apptainer/config.v8+.yaml
 
-[SLURM_ARGS]
-partition = snowball
-cpus_per_task = 36
-module_load = module load bedtools
+Due to a weird binding issue with current snakemake/SLURM (see Issues), you currently have to create a config file and fill it with the bindings directory for your singularity job. I hope this will be fixed, eventually.
 
 ```
-
-In case using singularity containter :
+mkdir -p ~/profile/apptainer/
+touch ~/profile/apptainer/config.v8+.yaml
 ```
-[VARUS]
-varus_path = /home/user/VARUS/
-hisat2_path = /home/user/hisat2
-sratoolkit_path = /home/user/sratoolkit.3.0.2-ubuntu64/bin
-batchsize = 100000
-maxbatches = 1000
 
+Add the following content to the file (adapt to your own working directory):
 
-[BRAKER]
-braker_cmd = singularity exec braker.sif braker.pl 
-genemark_path = /home/user/GeneMark-ETP/bin
-excluded = species
+```
+use-singularity: True
+singularity-args: "\"--bind /home/hoffk83/git/braker-snake:/home/hoffk83/git/braker-snake --bind /home/hoffk83/ncbi:/home/hoffk83/ncbi\""
+```
 
-[SLURM_ARGS]
-partition = snowball
-cpus_per_task = 48
-module_load = module load bedtools
-    module load singularity
-```  
-Please choose the optimal batchsize and maxbatches values: huge batchsize could lead to increasing running time.
+## Input data
 
-## Accuracies
+The input data for dataprep is expected to be in the following format:
 
-|                                             | Gene  |       | Transcript |       | Exon  |       |
-|:-------------------------------------------:|:-----:|:-----:|:----------:|:-----:|:-----:|:-----:|
-|                                             |  Sn   |  Sp   |     Sn     |  Sp   |  Sn   |  Sp   |
-|          *Caenorhabditis elegans*           |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 71.65 | 83.64 |   54.17    | 74.62 | 80.16 | 94.40 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 66.19 | 82.86 |   49.53    | 74.93 | 74.30 | 94.65 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 71.54 | 85.34 |   54.21    | 76.23 | 78.67 | 94.84 |
-|                                             |       |       |            |       |       |       |
-|           *Arabidopsis thaliana*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 82.63 | 82.86 |   57.66    | 77.95 | 82.44 | 93.96 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 82.54 | 82.96 |   57.58    | 78.09 | 82.20 | 94.01 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 82.64 | 83.08 |   57.64    | 78.14 | 82.12 | 94.08 |
-|                                             |       |       |            |       |       |       |
-|            *Populus trichocarpa*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 77.93 | 88.46 |   63.15    | 80.83 | 85.48 | 94.50 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 78.16 | 88.53 |   63.29    | 81.38 | 85.57 | 94.69 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 78.33 | 88.62 |   63.40    | 81.52 | 85.59 | 94.82 |
-|                                             |       |       |            |       |       |       |
-|            *Medicago truncatula*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 50.28 | 72.97 |   50.28    | 65.27 | 77.79 | 88.07 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 50.53 | 72.91 |   50.53    | 65.26 | 77.79 | 88.22 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 50.56 | 72.95 |   50.56    | 65.56 | 77.71 | 88.46 |
-|                                             |       |       |            |       |       |       |
-|         *Parasteatoda tepidariorum*         |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 49.02 | 59.55 |   41.56    | 53.45 | 55.76 | 86.67 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 46.47 | 59.71 |   39.07    | 53.89 | 51.97 | 87.24 |
-|                                             |       |       |            |       |       |       |
-|                *Danio rerio*                |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 56.67 | 69.55 |   35.42    | 66.57 | 66.07 | 91.98 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 56.79 | 70.72 |   35.36    | 67.76 | 65.34 | 92.60 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 56.84 | 71.11 |   35.30    | 68.06 | 65.85 | 92.73 |
-|                                             |       |       |            |       |       |       |
-|          *Drosophila Melanogaster*          |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 86.45 | 90.11 |   60.03    | 82.61 | 83.88 | 95.34 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 86.89 | 89.85 |   60.07    | 81.99 | 83.47 | 94.95 |
-|  batchsize = 75000 maxbatches = 600 Total = 45M   | 87.85 | 90.31 |   61.19    | 83.11 | 84.16 | 95.43 |
-|                                             |       |       |            |       |       |       |
-|           *Solanum lycopersicum*            |       |       |            |       |       |       |
-| batchsize = 1500000 maxbatches = 200 Total = 300M | 46.34 | 47.79 |   37.54    | 47.50 | 83.88 | 94.52 |
-| batchsize = 100000 maxbatches = 1000 Total = 100M | 46.23 | 47.76 |   37.43    | 47.42 | 83.40 | 94.47 |
+```
+<taxon> <odb_partition> <busco_lineage>
+```
 
+You find a small example in input.csv.  You may want to modify input.csv
+
+The input data for annotate is expected to be in the following format:
+
+```
+species,taxon,accession,genome_file,odb_file,rnaseq_file,legacy_prot_file,annotation_file,busco_lineage
+Epithemia_pelagica,Rhopalodiales,GCA_946965045.2,data/species/Epithemia_pelagica/genome/genome.fa,data/orthodb/Stramenopiles.fa,,,,stramenopiles_odb10
+```
+
+You find a small exampel in the species.csv. You can build one large input file for all taxa after dataprep has finished. Each of the taxa produces a compatible csv file.
+
+**Warning:** specifying a taxon that includes another taxon in the input is dangerous! We are not checking for species duplicates across taxa. Don't do this!
+
+The first workflow, `Snakefile_dataprep` will run all expensive tasks for one taxon in a loop on node. This means if you provide a taxon with extremely many species/genomes to process, this may lead to exceeding the runtime limit of the BRAIN. For example 7 libraries for a single species take ~3 hours for fasterq-dump and gzipping. This means, if you set the threshold to dowload at most 10 libs per species, and if every species in the taxon has RNA-Seq, then a taxon should have at most 16 species in order to have a good chance that the job will not die due to the runtime limit.
+
+## Running
+
+Execute this only in a place where you have space for many GBs of data, output is written to a subdirectory data and will be very, very big! Be patient, at the first execution, large containers are pulled. This takes between 20 minutes and 2 hours, before anything else happens. Best to start in screen. The pipeline automatically submits some tasks via SLURM.
+
+Preparing to run either of the pipelines on login-a or login-b:
+
+```
+screen # enter screen before proceeding
+mamba activate snakemake
+module load singularity
+cd braker-snake
+```
+
+Run the data download and processing pipeline:
+
+```
+snakemake -s Snakefile_dataprep --executor slurm --default-resources slurm_account=none slurm_partition=batch --jobs=10 --use-apptainer
+```
+
+Testing the annotation pipeline:
+
+```
+snakemake -s Snakefile_annotate --executor slurm --default-resources slurm_account=none slurm_partition=batch --jobs=10 --use-apptainer
+```
+
+### Known issues
+
+Everything that relies on download from the web is fragile. For example, the error message `panic: runtime error: invalid memory address or nil pointer dereference` can happen when a ncbi datasets genome data download fails. Simply restart the workflow (do not delete previously obtained data). It will automatically try to fix it.
+
+If a fastqdump was interrupted during gzip (because sth else killed the pipeline), you may have to go to the fastq folders of species and delete the unfinished library files before restarting. Otherwise, hisat2 will fail on the incomplete input
+
+## Current DAGs with example data
+
+(can always be generated with `snakemake -s Snakefile_dataprep --dag | dot -Tpng > dag1.png`, potentially not on BRAIN because dot may not be installed)
+
+![DAG](dag1.png)
+
+(can always be generated with `snakemake -s Snakefile_annotate --dag | dot -Tpng > dag2.png`, potentially not on BRAIN because dot may not be installed)
+
+![DAG](dag2.png)
