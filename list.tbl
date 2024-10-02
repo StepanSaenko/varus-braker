@@ -1,0 +1,5 @@
+ID	DNA	RNA
+Tribolium castaneum	https://www.ncbi.nlm.nih.gov/assembly/GCF_000002335.3/#
+Drosophila Melanogaster
+Parasteatoda tepidariorum	/home/stepan/projects/pipeline/genome.fasta.masked
+Bombus terrestris	GCF_910591885.1_iyBomTerr1.2_genomic.fna	SRR9953273,SRR8946260,SRR8946259,SRR8946258,SRR8946257,SRR8946256,SRR8946255,SRR8946254,SRR8946253,SRR8946252

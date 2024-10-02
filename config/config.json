@@ -1,0 +1,49 @@
+{
+    "account" : "hz",
+    
+    "species_info": "/home/stepan/projects/pipeline/list.tbl",
+    
+    "references": {
+        "fasta" : "/data/references/Canis_lupus_familiaris/UCSC/UU_Cfam_GSD_1.0_canFam4/Sequence/UU_Cfam_GSD_1.0_ROSY.fa",
+        "bwa_index": "/data/references/Canis_lupus_familiaris/UCSC/UU_Cfam_GSD_1.0_canFam4/Sequence/bwa-mem_index/genome.fa",
+        "exon_bed": "/data/projects/p871_Somatic_variant_calling_in_dog_glioblastoma/resources/exons_CanFam4.bed"
+    },
+    
+    "resources" : {
+        "small_long" : {
+            "mem_mb" : 4000,
+            "time" : 720
+        },
+        "small_short" : {
+            "mem_mb" : 4000,
+            "time" : 240
+        },
+        "medium_long" : {
+            "threads" : 16,
+            "mem_mb" : 16000,
+            "time" : 720
+        },
+        "big_long" : {
+            "threads" : 16,
+            "mem_mb" : 64000,
+            "time" : 1080
+        },
+        "copy_umi_from_readname" : {
+            "mem_mb" : 1000,
+            "time" : 1440
+        }
+    },
+
+    "containers":
+    {
+        "fastp": "/mnt/apps/centos7/fastp_0.23.2--h5f740d0_3.sif",
+        "bwa": "/mnt/apps/centos7/bwa:0.7.17--h7132678_10",
+        "gatk": "/mnt/apps/centos7/gatk_4.4.0.0.sif",
+        "fgbio": "/mnt/apps/centos7/fgbio_2.1.0--hdfd78af_0",
+        "samtools": "/mnt/apps/centos7/samtools:1.17--hd87286a_2",
+        "multiqc": "/mnt/apps/centos7/multiqc:1.16--pyhdfd78af_0",
+        "mosdepth": "/mnt/apps/centos7/mosdepth:0.3.5--hd299d5a_0",
+        "umi_tools" : "/mnt/apps/centos7/umi_tools_1.1.2--py38hbff2b2d_1.sif"
+    }
+
+}
