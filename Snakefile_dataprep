@@ -1,0 +1,63 @@
+"""
+braker-snake
+
+Katharina J. Hoff, Stepan Saenko, Clara Pitzschel
+
+University of Greifswald
+
+A joint effort to automated bulk genome annotation
+"""
+
+__author__ = "Katharina J. Hoff, Stepan Saenko, Clara Pitzschel"
+
+import configparser
+import pandas as pd
+from pathlib import Path
+import json # is required in genome_download.smk
+import re
+import glob
+import shutil # is required in genome_download.smk
+from snakemake.io import expand
+
+# Load and parse the config file
+config = configparser.ConfigParser()
+config.read('config_dataprep.ini')
+input_csv = config['INPUT']['input_csv']
+
+# define local rules that are not submitted via SLURM
+# some of them are local because they are fast, others because there bottleneck is i/o, not CPU
+localrules: all, \
+            download_assembly_info, assembly_json_to_tbl, classify_species, prepare_download_assemblies_from_ncbi, execute_genome_download_commands, delete_ncbi_readme, \
+            prepare_legacy_protein_download, execute_legacy_prot_download_commands, write_simplify_legacy_protein_headers_cmds, execute_fix_headers_commands, \
+            shorten_genomic_fasta_headers, select_pseudo, add_introns, gff3_to_gtf, \
+            download_orthodb_partitions, \
+            retrieve_rnaseq_info_from_sra, cleanup_sam_bam_unsorted_files, cleanup_sorted_bam_files, remove_bad_libraries, cleanup_rnaseq, \
+            aggregate_results
+            
+#, download_fastq
+
+# Read the input CSV file to get taxon and odb partition names
+# Assuming the CSV file is tab-separated
+data = pd.read_csv(input_csv, header=None, sep=' ', names=['taxa', 'odb_partition', 'busco_db'])
+
+# Create separate lists for taxa and unique odb partitions
+taxa_list = data['taxa'].tolist()
+odb_list = data['odb_partition'].tolist()
+unique_odb_partitions = data['odb_partition'].unique().tolist()
+
+# Create the checkpoint file directory for both workflows if it does not exist yet
+checkptdir = "data/checkpoints_dataprep"
+if not Path(checkptdir).exists():
+    Path(checkptdir).mkdir(parents=True, exist_ok=True)
+
+# Include other rule files (assuming they define their own targets without using wildcards inappropriately)
+include: "rules_dataprep/genome_download.smk"
+include: "rules_dataprep/odb_download.smk"
+include: "rules_dataprep/rnaseq_download.smk"
+include: "rules_dataprep/aggregate.smk"
+
+# Main rule to process each taxon
+rule all:
+    input:
+        expand(config['BRAKER']['orthodb_path'] + "/{odb_partition}.fa", odb_partition=unique_odb_partitions),
+        expand("data/checkpoints_dataprep/{taxon}_C01_data.csv", taxon=taxa_list)

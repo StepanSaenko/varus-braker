@@ -1,0 +1,2 @@
+species,taxon,accession,genome_file,odb_file,rnaseq_file,legacy_prot_file,annotation_file,busco_lineage
+Asterionella_formosa,Fragilariales,GCA_002256025.1,data/species/Asterionella_formosa/genome/genome.fa,data/orthodb/Stramenopiles.fa,,,,stramenopiles_odb10

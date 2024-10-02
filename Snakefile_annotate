@@ -1,0 +1,58 @@
+"""
+braker-snake
+
+Katharina J. Hoff, Stepan Saenko, Clara Pitzschel
+
+University of Greifswald
+
+A joint effort to automated bulk genome annotation
+"""
+
+"""
+braker-snake
+
+Katharina J. Hoff, Stepan Saenko, Clara Pitzschel
+
+University of Greifswald
+
+A joint effort to automated bulk genome annotation
+"""
+
+__author__ = "Katharina J. Hoff, Stepan Saenko, Clara Pitzschel"
+
+import configparser
+import pandas as pd
+from pathlib import Path
+from snakemake.io import expand
+
+# Load and parse the config file
+config = configparser.ConfigParser()
+config.read('config_annotate.ini')
+species_csv = config['INPUT']['species_csv'] # is an output of the data aggregation workflow
+
+# read the input file to create index
+df = pd.read_csv(species_csv)
+identifiers = df['species'].tolist()
+
+# define local rules that are not submitted via SLURM
+# some of them are local because they are fast, others because there bottleneck is i/o, not CPU
+localrules: all
+
+
+# Create the checkpoint file directory for both workflows if it does not exist yet
+checkptdir = "data/checkpoints_annotate"
+if not Path(checkptdir).exists():
+    Path(checkptdir).mkdir(parents=True, exist_ok=True)
+
+# Include other rule files (assuming they define their own targets without using wildcards inappropriately)
+include: "rules_annotation/masking.smk"
+include: "rules_annotation/braker.smk"
+include: "rules_annotation/busco.smk"
+
+# Main rule to process each taxon
+rule all:
+    input:
+        expand("data/checkpoints_annotate/{spid}_busco.csv", spid=identifiers)
+        # This is the place where you have to expand when you are waiting for more targets! For example,
+        # we will implement RNA-Seq download, and this is where you have to add the RNA-Seq targets.
+
